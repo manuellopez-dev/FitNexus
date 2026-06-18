@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "96954918433",
+    "project_id": "fitnexus-app-61488",
+    "storage_bucket": "fitnexus-app-61488.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:96954918433:android:17e92dcabbafe017626560",
+        "android_client_info": {
+          "package_name": "com.fitnexus.fitnexus"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "96954918433-0sp4g7m1p3i45i2bniofde50kr0p7gg2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDh3ULmf4EUX9Aj9TnoprBUfkSmA1qh4Oc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "96954918433-0sp4g7m1p3i45i2bniofde50kr0p7gg2.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "96954918433-fc0aurkh8m3agvbuvucdgf04cvv8kdhs.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.fitnexus.fitnexus"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
