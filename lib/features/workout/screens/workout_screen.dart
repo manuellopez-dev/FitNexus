@@ -120,7 +120,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
             const SizedBox(height: 16),
             Text(
               '¡Rutina completada!',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.zenDots(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: const Color(0xFFE8E8F0),
@@ -129,7 +129,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
             const SizedBox(height: 8),
             Text(
               'Excelente trabajo, Manuel',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.zenDots(
                 fontSize: 14,
                 color: const Color(0xFF6B6B80),
               ),
@@ -151,7 +151,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                 ),
                 child: Text(
                   'Finalizar',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                  style: GoogleFonts.zenDots(fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -214,7 +214,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
             const SizedBox(width: 6),
             Text(
               'EN VIVO',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.zenDots(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFFFF4D6D),
@@ -224,7 +224,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
         ),
         Text(
           'Serie $_serieActual de $_totalSeries',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.zenDots(
             fontSize: 13,
             color: const Color(0xFF6B6B80),
           ),
@@ -270,7 +270,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
           const SizedBox(height: 8),
           Text(
             _ejercicioActualData['nombre'],
-            style: GoogleFonts.inter(
+            style: GoogleFonts.zenDots(
               fontSize: 14,
               color: const Color(0xFF6B6B80),
             ),
@@ -286,7 +286,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       children: [
         Text(
           _ejercicioActualData['nombre'],
-          style: GoogleFonts.inter(
+          style: GoogleFonts.zenDots(
             fontSize: 22,
             fontWeight: FontWeight.bold,
             color: const Color(0xFFE8E8F0),
@@ -295,7 +295,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
         const SizedBox(height: 4),
         Text(
           _ejercicioActualData['musculo'],
-          style: GoogleFonts.inter(
+          style: GoogleFonts.zenDots(
             fontSize: 13,
             color: const Color(0xFF6B6B80),
           ),
@@ -342,7 +342,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
         children: [
           Text(
             valor,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.zenDots(
               fontSize: 28,
               fontWeight: FontWeight.bold,
               color: color,
@@ -351,7 +351,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
           const SizedBox(height: 4),
           Text(
             label,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.zenDots(
               fontSize: 11,
               color: const Color(0xFF6B6B80),
             ),
@@ -379,14 +379,14 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
         children: [
           Text(
             'Descanso',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.zenDots(
               fontSize: 12,
               color: const Color(0xFF6B6B80),
             ),
           ),
           Text(
             _formatTiempo(_segundosDescanso),
-            style: GoogleFonts.inter(
+            style: GoogleFonts.zenDots(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: _descansando
@@ -417,7 +417,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
             ),
             child: Text(
               _descansando ? 'Descansando...' : 'Serie completada ✓',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.zenDots(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
@@ -438,7 +438,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
             ),
             child: Text(
               'Terminar entrenamiento',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.zenDots(
                 fontSize: 14,
                 color: const Color(0xFF6B6B80),
               ),

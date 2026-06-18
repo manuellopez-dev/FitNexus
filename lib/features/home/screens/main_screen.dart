@@ -67,7 +67,7 @@ class _MainScreenState extends State<MainScreen> {
           const SizedBox(height: 4),
           Text(
             label,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.zenDots(
               fontSize: 11,
               color: active
                   ? const Color(0xFFC8F135)
@@ -90,7 +90,7 @@ class _ProgresoPlaceholder extends StatelessWidget {
       body: Center(
         child: Text(
           'Próximamente',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.zenDots(
             fontSize: 18,
             color: const Color(0xFF6B6B80),
           ),

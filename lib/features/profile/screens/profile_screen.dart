@@ -38,7 +38,7 @@ Widget build(BuildContext context, WidgetRef ref) {
   Widget _buildHeader() {
     return Text(
       'Mi Perfil',
-      style: GoogleFonts.inter(
+      style: GoogleFonts.zenDots(
         fontSize: 24,
         fontWeight: FontWeight.bold,
         color: const Color(0xFFE8E8F0),
@@ -74,7 +74,7 @@ Widget build(BuildContext context, WidgetRef ref) {
         const SizedBox(height: 14),
         Text(
           nombre,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.zenDots(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: const Color(0xFFE8E8F0),
@@ -83,7 +83,7 @@ Widget build(BuildContext context, WidgetRef ref) {
         const SizedBox(height: 4),
         Text(
           email,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.zenDots(
             fontSize: 13,
             color: const Color(0xFF6B6B80),
           ),
@@ -99,7 +99,7 @@ Widget build(BuildContext context, WidgetRef ref) {
       children: [
         Text(
           'Mis Metas',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.zenDots(
             fontSize: 16,
             fontWeight: FontWeight.bold,
             color: const Color(0xFFE8E8F0),
@@ -151,14 +151,14 @@ Widget build(BuildContext context, WidgetRef ref) {
             children: [
               Text(
                 label,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.zenDots(
                   fontSize: 13,
                   color: const Color(0xFF6B6B80),
                 ),
               ),
               Text(
                 valor,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.zenDots(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
                   color: const Color(0xFFC8F135),
@@ -179,7 +179,7 @@ Widget build(BuildContext context, WidgetRef ref) {
           const SizedBox(height: 6),
           Text(
             actual,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.zenDots(
               fontSize: 11,
               color: const Color(0xFF6B6B80),
             ),
@@ -198,7 +198,7 @@ Widget build(BuildContext context, WidgetRef ref) {
       children: [
         Text(
           'Esta semana',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.zenDots(
             fontSize: 16,
             fontWeight: FontWeight.bold,
             color: const Color(0xFFE8E8F0),
@@ -238,7 +238,7 @@ Widget build(BuildContext context, WidgetRef ref) {
                   const SizedBox(height: 6),
                   Text(
                     dias[index],
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.zenDots(
                       fontSize: 11,
                       color: completado
                           ? const Color(0xFFC8F135)
@@ -267,7 +267,7 @@ Widget build(BuildContext context, WidgetRef ref) {
       children: [
         Text(
           'Configuración',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.zenDots(
             fontSize: 16,
             fontWeight: FontWeight.bold,
             color: const Color(0xFFE8E8F0),
@@ -292,7 +292,7 @@ Widget build(BuildContext context, WidgetRef ref) {
                     ),
                     title: Text(
                       item['label'] as String,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.zenDots(
                         fontSize: 14,
                         color: const Color(0xFFE8E8F0),
                       ),
@@ -325,7 +325,7 @@ Widget build(BuildContext context, WidgetRef ref) {
             },
             child: Text(
               'Cerrar sesión',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.zenDots(
                 fontSize: 14,
                 color: const Color(0xFFFF4D6D),
                 fontWeight: FontWeight.w600,
@@ -368,7 +368,7 @@ Widget build(BuildContext context, WidgetRef ref) {
         const SizedBox(height: 4),
         Text(
           label,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.zenDots(
             fontSize: 11,
             color: active ? const Color(0xFFC8F135) : const Color(0xFF6B6B80),
           ),

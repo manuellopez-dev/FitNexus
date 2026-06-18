@@ -104,7 +104,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
               Text(
                 'FitNexus',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.zenDots(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
                   color: const Color(0xFFE8E8F0),
@@ -114,7 +114,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
               Text(
                 'Tu entrenador inteligente',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.zenDots(
                   fontSize: 14,
                   color: const Color(0xFF6B6B80),
                 ),
@@ -127,7 +127,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     'Nombre',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.zenDots(
                       fontSize: 13,
                       color: const Color(0xFF6B6B80),
                     ),
@@ -136,7 +136,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 8),
                 TextField(
                   controller: _nombreController,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.zenDots(
                     color: const Color(0xFFE8E8F0),
                     fontSize: 15,
                   ),
@@ -144,7 +144,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     filled: true,
                     fillColor: const Color(0xFF1E1E24),
                     hintText: 'Tu nombre o apodo',
-                    hintStyle: GoogleFonts.inter(
+                    hintStyle: GoogleFonts.zenDots(
                       color: const Color(0xFF6B6B80),
                       fontSize: 14,
                     ),
@@ -170,7 +170,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   'Correo',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.zenDots(
                     fontSize: 13,
                     color: const Color(0xFF6B6B80),
                   ),
@@ -181,7 +181,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.zenDots(
                   color: const Color(0xFFE8E8F0),
                   fontSize: 15,
                 ),
@@ -189,7 +189,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   filled: true,
                   fillColor: const Color(0xFF1E1E24),
                   hintText: 'correo@ejemplo.com',
-                  hintStyle: GoogleFonts.inter(
+                  hintStyle: GoogleFonts.zenDots(
                     color: const Color(0xFF6B6B80),
                     fontSize: 14,
                   ),
@@ -214,7 +214,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   'Contraseña',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.zenDots(
                     fontSize: 13,
                     color: const Color(0xFF6B6B80),
                   ),
@@ -225,7 +225,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               TextField(
                 controller: _passwordController,
                 obscureText: _obscurePassword,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.zenDots(
                   color: const Color(0xFFE8E8F0),
                   fontSize: 15,
                 ),
@@ -233,7 +233,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   filled: true,
                   fillColor: const Color(0xFF1E1E24),
                   hintText: '••••••••',
-                  hintStyle: GoogleFonts.inter(
+                  hintStyle: GoogleFonts.zenDots(
                     color: const Color(0xFF6B6B80),
                     fontSize: 14,
                   ),
@@ -277,7 +277,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   child: Text(
                     _errorMessage!,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.zenDots(
                       fontSize: 13,
                       color: const Color(0xFFFF4D6D),
                     ),
@@ -311,7 +311,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         )
                       : Text(
                           _isRegistrando ? 'Crear cuenta' : 'Iniciar sesión',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.zenDots(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
                           ),
@@ -328,7 +328,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     _isRegistrando
                         ? '¿Ya tienes cuenta? '
                         : '¿No tienes cuenta? ',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.zenDots(
                       fontSize: 13,
                       color: const Color(0xFF6B6B80),
                     ),
@@ -340,7 +340,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     }),
                     child: Text(
                       _isRegistrando ? 'Inicia sesión' : 'Regístrate',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.zenDots(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFFC8F135),

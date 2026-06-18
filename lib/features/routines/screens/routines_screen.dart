@@ -86,7 +86,7 @@ class _RoutinesScreenState extends State<RoutinesScreen> {
         children: [
           Text(
             'Mis Rutinas',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.zenDots(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: const Color(0xFFE8E8F0),
@@ -141,7 +141,7 @@ class _RoutinesScreenState extends State<RoutinesScreen> {
               child: Center(
                 child: Text(
                   _filtros[index],
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.zenDots(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: activo ? Colors.black : const Color(0xFF6B6B80),
@@ -191,7 +191,7 @@ class _RoutinesScreenState extends State<RoutinesScreen> {
                   children: [
                     Text(
                       rutina['nombre'],
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.zenDots(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFFE8E8F0),
@@ -200,7 +200,7 @@ class _RoutinesScreenState extends State<RoutinesScreen> {
                     const SizedBox(height: 4),
                     Text(
                       '${rutina['ejercicios']} ejercicios · ${rutina['duracion']} min',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.zenDots(
                         fontSize: 13,
                         color: const Color(0xFF6B6B80),
                       ),
@@ -243,7 +243,7 @@ class _RoutinesScreenState extends State<RoutinesScreen> {
           children: [
             Text(
               'Nueva Rutina',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.zenDots(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: const Color(0xFFE8E8F0),
@@ -251,10 +251,10 @@ class _RoutinesScreenState extends State<RoutinesScreen> {
             ),
             const SizedBox(height: 16),
             TextField(
-              style: GoogleFonts.inter(color: const Color(0xFFE8E8F0)),
+              style: GoogleFonts.zenDots(color: const Color(0xFFE8E8F0)),
               decoration: InputDecoration(
                 hintText: 'Nombre de la rutina',
-                hintStyle: GoogleFonts.inter(color: const Color(0xFF6B6B80)),
+                hintStyle: GoogleFonts.zenDots(color: const Color(0xFF6B6B80)),
                 filled: true,
                 fillColor: const Color(0xFF1E1E24),
                 border: OutlineInputBorder(
@@ -286,7 +286,7 @@ class _RoutinesScreenState extends State<RoutinesScreen> {
                 ),
                 child: Text(
                   'Crear rutina',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.zenDots(
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
                   ),
@@ -331,7 +331,7 @@ class _RoutinesScreenState extends State<RoutinesScreen> {
         const SizedBox(height: 4),
         Text(
           label,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.zenDots(
             fontSize: 11,
             color: active ? const Color(0xFFC8F135) : const Color(0xFF6B6B80),
           ),

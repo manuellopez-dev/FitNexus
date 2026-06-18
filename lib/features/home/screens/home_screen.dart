@@ -62,7 +62,7 @@ class HomeScreen extends ConsumerWidget {
             children: [
               Text(
                 'Hola, $nombre 👋',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.zenDots(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: const Color(0xFFE8E8F0),
@@ -70,7 +70,7 @@ class HomeScreen extends ConsumerWidget {
               ),
               Text(
                 'Lunes · Día de pecho',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.zenDots(
                   fontSize: 13,
                   color: const Color(0xFF6B6B80),
                 ),
@@ -111,7 +111,7 @@ class HomeScreen extends ConsumerWidget {
         children: [
           Text(
             'Rutina del día',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.zenDots(
               fontSize: 12,
               color: const Color(0xFF6B6B80),
             ),
@@ -125,7 +125,7 @@ class HomeScreen extends ConsumerWidget {
                 children: [
                   Text(
                     'Pecho + Tríceps',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.zenDots(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: const Color(0xFFE8E8F0),
@@ -134,7 +134,7 @@ class HomeScreen extends ConsumerWidget {
                   const SizedBox(height: 4),
                   Text(
                     '6 ejercicios · 45 min',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.zenDots(
                       fontSize: 13,
                       color: const Color(0xFF6B6B80),
                     ),
@@ -156,7 +156,7 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 child: Text(
                   'Iniciar',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.zenDots(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                   ),
@@ -182,7 +182,7 @@ class HomeScreen extends ConsumerWidget {
       children: [
         Text(
           'Estadísticas',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.zenDots(
             fontSize: 16,
             fontWeight: FontWeight.bold,
             color: const Color(0xFFE8E8F0),
@@ -222,7 +222,7 @@ class HomeScreen extends ConsumerWidget {
                     children: [
                       Text(
                         stat['value'] as String,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.zenDots(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: stat['color'] as Color,
@@ -230,7 +230,7 @@ class HomeScreen extends ConsumerWidget {
                       ),
                       Text(
                         stat['label'] as String,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.zenDots(
                           fontSize: 11,
                           color: const Color(0xFF6B6B80),
                         ),
@@ -258,7 +258,7 @@ class HomeScreen extends ConsumerWidget {
       children: [
         Text(
           'Próximos ejercicios',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.zenDots(
             fontSize: 16,
             fontWeight: FontWeight.bold,
             color: const Color(0xFFE8E8F0),
@@ -294,7 +294,7 @@ class HomeScreen extends ConsumerWidget {
                 children: [
                   Text(
                     e['nombre']!,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.zenDots(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: const Color(0xFFE8E8F0),
@@ -302,7 +302,7 @@ class HomeScreen extends ConsumerWidget {
                   ),
                   Text(
                     e['detalle']!,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.zenDots(
                       fontSize: 13,
                       color: const Color(0xFF6B6B80),
                     ),
@@ -354,7 +354,7 @@ class HomeScreen extends ConsumerWidget {
         const SizedBox(height: 4),
         Text(
           label,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.zenDots(
             fontSize: 11,
             color: active ? const Color(0xFFC8F135) : const Color(0xFF6B6B80),
           ),
