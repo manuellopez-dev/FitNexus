@@ -23,7 +23,10 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
   int _segundosDescanso = 90;
   bool _descansando = false;
   Timer? _timer;
+  Timer? _cronometro;
   late final DateTime _inicio;
+  int _segundosTranscurridos = 0;
+  int _calorias = 0;
 
   RoutineExercise get _ejercicioActualData => _ejercicios[_ejercicioActual];
   int get _totalSeries => _ejercicioActualData.series;
@@ -36,11 +39,19 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     if (_ejercicios.isNotEmpty) {
       _segundosDescanso = _ejercicios.first.descansoSegundos;
     }
+    _cronometro = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {
+        _segundosTranscurridos++;
+        _calorias = (_segundosTranscurridos / 60 * 8).round();
+      });
+    });
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _cronometro?.cancel();
     super.dispose();
   }
 
@@ -246,9 +257,9 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
             children: [
               const SizedBox(height: 20),
               _buildHeader(),
-              const SizedBox(height: 20),
-              _buildImagenEjercicio(),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
+              _buildMetricas(),
+              const SizedBox(height: 16),
               _buildNombreEjercicio(),
               const SizedBox(height: 20),
               _buildCardSeriesReps(),
@@ -290,7 +301,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
           ],
         ),
         Text(
-          'Serie $_serieActual de $_totalSeries',
+          '${_ejercicioActual + 1}/${_ejercicios.length} · Serie $_serieActual de $_totalSeries',
           style: GoogleFonts.zenDots(
             fontSize: 13,
             color: const Color(0xFF6B6B80),
@@ -317,28 +328,42 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     );
   }
 
-  Widget _buildImagenEjercicio() {
+  Widget _buildMetricas() {
+    return Row(
+      children: [
+        Expanded(child: _metricaCard(Icons.timer_outlined, _formatTiempo(_segundosTranscurridos), 'Tiempo')),
+        const SizedBox(width: 10),
+        Expanded(child: _metricaCard(Icons.local_fire_department_outlined, '$_calorias', 'Calorías')),
+        const SizedBox(width: 10),
+        Expanded(child: _metricaCard(Icons.fitness_center, '${_ejercicioActual + 1}/${_ejercicios.length}', 'Ejercicio')),
+      ],
+    );
+  }
+
+  Widget _metricaCard(IconData icon, String valor, String label) {
     return Container(
-      width: double.infinity,
-      height: 200,
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
       decoration: BoxDecoration(
         color: const Color(0xFF1E1E24),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFF2A2A35)),
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.fitness_center,
-            color: Color(0xFF2A2A35),
-            size: 48,
-          ),
-          const SizedBox(height: 8),
+          Icon(icon, color: const Color(0xFFC8F135), size: 18),
+          const SizedBox(height: 6),
           Text(
-            _ejercicioActualData.nombre,
+            valor,
             style: GoogleFonts.zenDots(
-              fontSize: 14,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFFE8E8F0),
+            ),
+          ),
+          Text(
+            label,
+            style: GoogleFonts.zenDots(
+              fontSize: 10,
               color: const Color(0xFF6B6B80),
             ),
           ),
