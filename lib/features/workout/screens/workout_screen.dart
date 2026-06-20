@@ -1,55 +1,38 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/models/routine.dart';
+import '../../../core/models/exercise.dart';
 
 class WorkoutScreen extends StatefulWidget {
-  const WorkoutScreen({super.key});
+  final Routine? routine;
+
+  const WorkoutScreen({super.key, this.routine});
 
   @override
   State<WorkoutScreen> createState() => _WorkoutScreenState();
 }
 
 class _WorkoutScreenState extends State<WorkoutScreen> {
+  late final List<RoutineExercise> _ejercicios;
   int _serieActual = 1;
-  final int _totalSeries = 4;
   int _ejercicioActual = 0;
   int _segundosDescanso = 90;
   bool _descansando = false;
   Timer? _timer;
 
-  final List<Map<String, dynamic>> _ejercicios = [
-    {
-      'nombre': 'Press de Banca',
-      'musculo': 'Pecho · Tríceps',
-      'series': 4,
-      'reps': 12,
-      'descanso': 90,
-    },
-    {
-      'nombre': 'Aperturas con Mancuernas',
-      'musculo': 'Pecho',
-      'series': 3,
-      'reps': 15,
-      'descanso': 60,
-    },
-    {
-      'nombre': 'Fondos en Paralelas',
-      'musculo': 'Tríceps · Pecho',
-      'series': 3,
-      'reps': 10,
-      'descanso': 75,
-    },
-    {
-      'nombre': 'Press Militar',
-      'musculo': 'Hombros',
-      'series': 4,
-      'reps': 10,
-      'descanso': 90,
-    },
-  ];
+  RoutineExercise get _ejercicioActualData => _ejercicios[_ejercicioActual];
+  int get _totalSeries => _ejercicioActualData.series;
 
-  Map<String, dynamic> get _ejercicioActualData =>
-      _ejercicios[_ejercicioActual];
+  @override
+  void initState() {
+    super.initState();
+    _ejercicios = widget.routine?.ejercicios ?? [];
+    if (_ejercicios.isNotEmpty) {
+      _segundosDescanso = _ejercicios.first.descansoSegundos;
+    }
+  }
 
   @override
   void dispose() {
@@ -58,17 +41,18 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   }
 
   void _iniciarDescanso() {
+    _timer?.cancel();
     setState(() {
       _descansando = true;
-      _segundosDescanso = _ejercicioActualData['descanso'];
+      _segundosDescanso = _ejercicioActualData.descansoSegundos;
     });
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_segundosDescanso <= 0) {
         timer.cancel();
-        setState(() => _descansando = false);
+        if (mounted) setState(() => _descansando = false);
       } else {
-        setState(() => _segundosDescanso--);
+        if (mounted) setState(() => _segundosDescanso--);
       }
     });
   }
@@ -78,7 +62,6 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       _iniciarDescanso();
       setState(() => _serieActual++);
     } else {
-      // Siguiente ejercicio
       if (_ejercicioActual < _ejercicios.length - 1) {
         _timer?.cancel();
         setState(() {
@@ -87,9 +70,58 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
           _descansando = false;
         });
       } else {
+        _timer?.cancel();
         _mostrarResumen();
       }
     }
+  }
+
+  void _confirmarSalida() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E24),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Text(
+          '¿Terminar entrenamiento?',
+          style: GoogleFonts.zenDots(
+            fontSize: 16,
+            color: const Color(0xFFE8E8F0),
+          ),
+        ),
+        content: Text(
+          'Vas a perder el progreso de esta sesión.',
+          style: GoogleFonts.zenDots(
+            fontSize: 13,
+            color: const Color(0xFF6B6B80),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => context.pop(),
+            child: Text(
+              'Cancelar',
+              style: GoogleFonts.zenDots(color: const Color(0xFF6B6B80)),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              context.pop();
+              context.pop();
+            },
+            child: Text(
+              'Terminar',
+              style: GoogleFonts.zenDots(
+                color: const Color(0xFFFF4D6D),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _mostrarResumen() {
@@ -128,7 +160,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Excelente trabajo, Manuel',
+              'Excelente trabajo',
               style: GoogleFonts.zenDots(
                 fontSize: 14,
                 color: const Color(0xFF6B6B80),
@@ -139,8 +171,8 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.pop(context);
+                  context.pop();
+                  context.pop();
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFC8F135),
@@ -169,6 +201,24 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_ejercicios.isEmpty) {
+      return Scaffold(
+        backgroundColor: const Color(0xFF0D0D0F),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              'Selecciona una rutina primero',
+              style: GoogleFonts.zenDots(
+                fontSize: 16,
+                color: const Color(0xFF6B6B80),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0F),
       body: SafeArea(
@@ -230,7 +280,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
           ),
         ),
         GestureDetector(
-          onTap: () => Navigator.pop(context),
+          onTap: _confirmarSalida,
           child: Container(
             width: 36,
             height: 36,
@@ -269,7 +319,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            _ejercicioActualData['nombre'],
+            _ejercicioActualData.nombre,
             style: GoogleFonts.zenDots(
               fontSize: 14,
               color: const Color(0xFF6B6B80),
@@ -285,7 +335,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          _ejercicioActualData['nombre'],
+          _ejercicioActualData.nombre,
           style: GoogleFonts.zenDots(
             fontSize: 22,
             fontWeight: FontWeight.bold,
@@ -294,7 +344,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
         ),
         const SizedBox(height: 4),
         Text(
-          _ejercicioActualData['musculo'],
+          _ejercicioActualData.musculo,
           style: GoogleFonts.zenDots(
             fontSize: 13,
             color: const Color(0xFF6B6B80),
@@ -317,7 +367,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
         const SizedBox(width: 12),
         Expanded(
           child: _statCard(
-            valor: '${_ejercicioActualData['reps']}',
+            valor: '${_ejercicioActualData.reps}',
             label: 'Repeticiones',
             color: const Color(0xFFE8E8F0),
           ),
@@ -429,7 +479,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
           width: double.infinity,
           height: 44,
           child: OutlinedButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: _confirmarSalida,
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: Color(0xFF2A2A35)),
               shape: RoundedRectangleBorder(

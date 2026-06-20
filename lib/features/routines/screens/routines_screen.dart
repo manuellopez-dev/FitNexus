@@ -1,65 +1,34 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../../core/providers/auth_provider.dart';
+import '../../../core/models/routine.dart';
 
-class RoutinesScreen extends StatefulWidget {
+class RoutinesScreen extends ConsumerStatefulWidget {
   const RoutinesScreen({super.key});
 
   @override
-  State<RoutinesScreen> createState() => _RoutinesScreenState();
+  ConsumerState<RoutinesScreen> createState() => _RoutinesScreenState();
 }
 
-class _RoutinesScreenState extends State<RoutinesScreen> {
+class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
   int _filtroActivo = 0;
   final List<String> _filtros = ['Todos', 'Fuerza', 'Cardio'];
 
-  final List<Map<String, dynamic>> _rutinas = [
-    {
-      'nombre': 'Pecho + Tríceps',
-      'ejercicios': 6,
-      'duracion': 45,
-      'tipo': 'Fuerza',
-      'icon': Icons.fitness_center,
-    },
-    {
-      'nombre': 'Piernas + Glúteos',
-      'ejercicios': 8,
-      'duracion': 55,
-      'tipo': 'Fuerza',
-      'icon': Icons.directions_run,
-    },
-    {
-      'nombre': 'Espalda + Bíceps',
-      'ejercicios': 7,
-      'duracion': 50,
-      'tipo': 'Fuerza',
-      'icon': Icons.fitness_center,
-    },
-    {
-      'nombre': 'HIIT Cardio',
-      'ejercicios': 5,
-      'duracion': 30,
-      'tipo': 'Cardio',
-      'icon': Icons.directions_bike,
-    },
-    {
-      'nombre': 'Hombros + Trapecio',
-      'ejercicios': 6,
-      'duracion': 40,
-      'tipo': 'Fuerza',
-      'icon': Icons.fitness_center,
-    },
-  ];
+  List<Routine> _filtrar(List<Routine> rutinas) {
+    if (_filtroActivo == 0) return rutinas;
+    return rutinas.where((r) => r.tipo == _filtros[_filtroActivo]).toList();
+  }
 
-  List<Map<String, dynamic>> get _rutinasFiltradas {
-    if (_filtroActivo == 0) return _rutinas;
-    return _rutinas
-        .where((r) => r['tipo'] == _filtros[_filtroActivo])
-        .toList();
+  IconData _iconoPorTipo(String tipo) {
+    return tipo == 'Cardio' ? Icons.directions_bike : Icons.fitness_center;
   }
 
   @override
   Widget build(BuildContext context) {
+    final rutinasAsync = ref.watch(rutinasProvider);
+
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0F),
       body: SafeArea(
@@ -71,7 +40,20 @@ class _RoutinesScreenState extends State<RoutinesScreen> {
             const SizedBox(height: 20),
             _buildFiltros(),
             const SizedBox(height: 16),
-            Expanded(child: _buildListaRutinas()),
+            Expanded(
+              child: rutinasAsync.when(
+                data: (rutinas) => _buildListaRutinas(_filtrar(rutinas)),
+                loading: () => const Center(
+                  child: CircularProgressIndicator(color: Color(0xFFC8F135)),
+                ),
+                error: (err, stack) => Center(
+                  child: Text(
+                    'Error al cargar rutinas',
+                    style: GoogleFonts.zenDots(color: const Color(0xFF6B6B80)),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -87,7 +69,7 @@ class _RoutinesScreenState extends State<RoutinesScreen> {
           Text(
             'Mis Rutinas',
             style: GoogleFonts.zenDots(
-              fontSize: 24,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
               color: const Color(0xFFE8E8F0),
             ),
@@ -155,12 +137,24 @@ class _RoutinesScreenState extends State<RoutinesScreen> {
     );
   }
 
-  Widget _buildListaRutinas() {
+  Widget _buildListaRutinas(List<Routine> rutinas) {
+    if (rutinas.isEmpty) {
+      return Center(
+        child: Text(
+          'No hay rutinas en esta categoría',
+          style: GoogleFonts.zenDots(
+            fontSize: 13,
+            color: const Color(0xFF6B6B80),
+          ),
+        ),
+      );
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      itemCount: _rutinasFiltradas.length,
+      itemCount: rutinas.length,
       itemBuilder: (context, index) {
-        final rutina = _rutinasFiltradas[index];
+        final rutina = rutinas[index];
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
@@ -179,7 +173,7 @@ class _RoutinesScreenState extends State<RoutinesScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
-                  rutina['icon'] as IconData,
+                  _iconoPorTipo(rutina.tipo),
                   color: const Color(0xFFC8F135),
                   size: 24,
                 ),
@@ -190,7 +184,7 @@ class _RoutinesScreenState extends State<RoutinesScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      rutina['nombre'],
+                      rutina.nombre,
                       style: GoogleFonts.zenDots(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
@@ -199,7 +193,7 @@ class _RoutinesScreenState extends State<RoutinesScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${rutina['ejercicios']} ejercicios · ${rutina['duracion']} min',
+                      '${rutina.totalEjercicios} ejercicios · ${rutina.duracionEstimadaMinutos} min',
                       style: GoogleFonts.zenDots(
                         fontSize: 13,
                         color: const Color(0xFF6B6B80),
@@ -208,17 +202,20 @@ class _RoutinesScreenState extends State<RoutinesScreen> {
                   ],
                 ),
               ),
-              Container(
-                width: 36,
-                height: 36,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFC8F135),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.play_arrow_rounded,
-                  color: Colors.black,
-                  size: 20,
+              GestureDetector(
+                onTap: () => context.push('/workout', extra: rutina),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFC8F135),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.play_arrow_rounded,
+                    color: Colors.black,
+                    size: 20,
+                  ),
                 ),
               ),
             ],
@@ -229,6 +226,8 @@ class _RoutinesScreenState extends State<RoutinesScreen> {
   }
 
   void _mostrarDialogoNuevaRutina(BuildContext context) {
+    final nombreController = TextEditingController();
+
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF16161A),
@@ -244,13 +243,14 @@ class _RoutinesScreenState extends State<RoutinesScreen> {
             Text(
               'Nueva Rutina',
               style: GoogleFonts.zenDots(
-                fontSize: 20,
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: const Color(0xFFE8E8F0),
               ),
             ),
             const SizedBox(height: 16),
             TextField(
+              controller: nombreController,
               style: GoogleFonts.zenDots(color: const Color(0xFFE8E8F0)),
               decoration: InputDecoration(
                 hintText: 'Nombre de la rutina',
@@ -276,7 +276,13 @@ class _RoutinesScreenState extends State<RoutinesScreen> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: () => context.push('/workout'),
+                onPressed: () {
+                  final nombre = nombreController.text.trim();
+                  if (nombre.isEmpty) return;
+
+                  Navigator.pop(context);
+                  context.push('/exercise-selection', extra: nombre);
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFC8F135),
                   foregroundColor: Colors.black,
@@ -297,46 +303,6 @@ class _RoutinesScreenState extends State<RoutinesScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildNavbar(BuildContext context) {
-    return Container(
-      height: 70,
-      decoration: const BoxDecoration(
-        color: Color(0xFF16161A),
-        border: Border(top: BorderSide(color: Color(0xFF2A2A35))),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _navItem(Icons.home_rounded, 'Inicio', false),
-          _navItem(Icons.fitness_center, 'Rutinas', true),
-          _navItem(Icons.bar_chart, 'Progreso', false),
-          _navItem(Icons.person, 'Perfil', false),
-        ],
-      ),
-    );
-  }
-
-  Widget _navItem(IconData icon, String label, bool active) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(
-          icon,
-          color: active ? const Color(0xFFC8F135) : const Color(0xFF6B6B80),
-          size: 22,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: GoogleFonts.zenDots(
-            fontSize: 11,
-            color: active ? const Color(0xFFC8F135) : const Color(0xFF6B6B80),
-          ),
-        ),
-      ],
     );
   }
 }

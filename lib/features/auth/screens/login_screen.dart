@@ -29,44 +29,57 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _handleSubmit() async {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      setState(() => _errorMessage = 'Por favor llena todos los campos');
-      return;
-    }
-
-    if (_isRegistrando && _nombreController.text.isEmpty) {
-      setState(() => _errorMessage = 'Por favor ingresa tu nombre');
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final authService = ref.read(authServiceProvider);
-      if (_isRegistrando) {
-        final credential = await authService.register(
-          _emailController.text.trim(),
-          _passwordController.text.trim(),
-        );
-        await credential.user?.updateDisplayName(_nombreController.text.trim());
-      } else {
-        await authService.login(
-          _emailController.text.trim(),
-          _passwordController.text.trim(),
-        );
-      }
-      if (mounted) context.go('/home');
-    } on Exception catch (e) {
-      setState(() {
-        _errorMessage = _traducirError(e.toString());
-      });
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
+  if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+    setState(() => _errorMessage = 'Por favor llena todos los campos');
+    return;
   }
+
+  if (_isRegistrando && _nombreController.text.isEmpty) {
+    setState(() => _errorMessage = 'Por favor ingresa tu nombre');
+    return;
+  }
+
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+  });
+
+  try {
+    final authService = ref.read(authServiceProvider);
+    final firestoreService = ref.read(firestoreServiceProvider);
+
+    if (_isRegistrando) {
+  final credential = await authService.register(
+    _emailController.text.trim(),
+    _passwordController.text.trim(),
+  );
+  await credential.user?.updateDisplayName(_nombreController.text.trim());
+  if (credential.user != null) {
+    await firestoreService.crearPerfil(
+      credential.user!,
+      _nombreController.text.trim(),
+    );
+    await firestoreService.sembrarRutinasIniciales(credential.user!.uid);
+  }
+    } else {
+      await authService.login(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+      );
+    }
+
+    // Seed del catálogo global de ejercicios (solo se ejecuta si está vacío)
+    await firestoreService.sembrarCatalogoEjercicios();
+
+    if (mounted) context.go('/home');
+  } on Exception catch (e) {
+    setState(() {
+      _errorMessage = _traducirError(e.toString());
+    });
+  } finally {
+    if (mounted) setState(() => _isLoading = false);
+  }
+}
 
   String _traducirError(String error) {
     if (error.contains('user-not-found')) return 'No existe una cuenta con ese correo';

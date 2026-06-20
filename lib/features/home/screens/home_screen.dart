@@ -1,14 +1,24 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/models/routine.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
+  String _diaSemana() {
+    final dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    return dias[DateTime.now().weekday - 1];
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final rutinasAsync = ref.watch(rutinasProvider);
+    final historialAsync = ref.watch(historialProvider);
+
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0F),
       body: SafeArea(
@@ -20,11 +30,23 @@ class HomeScreen extends ConsumerWidget {
               const SizedBox(height: 20),
               _buildHeader(ref),
               const SizedBox(height: 24),
-              _buildRutinaDelDia(context),
+              rutinasAsync.when(
+                data: (rutinas) => _buildRutinaDelDia(context, rutinas),
+                loading: () => _buildCardPlaceholder(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
               const SizedBox(height: 24),
-              _buildEstadisticas(),
+              historialAsync.when(
+                data: (historial) => _buildEstadisticas(historial),
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
               const SizedBox(height: 24),
-              _buildProximosEjercicios(),
+              rutinasAsync.when(
+                data: (rutinas) => _buildProximosEjercicios(rutinas),
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
               const SizedBox(height: 100),
             ],
           ),
@@ -33,71 +55,109 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(WidgetRef ref) {
-  final user = ref.watch(authStateProvider).valueOrNull;
-  final nombre = user?.displayName ?? user?.email?.split('@')[0] ?? 'Usuario';
+  Widget _buildCardPlaceholder() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E24),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF2A2A35)),
+      ),
+      child: const Center(child: CircularProgressIndicator(color: Color(0xFFC8F135))),
+    );
+  }
 
-  return Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E1E24),
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFF2A2A35)),
-            ),
-            child: const Icon(
-              Icons.person,
-              color: Color(0xFF6B6B80),
-              size: 20,
-            ),
+  Widget _buildHeader(WidgetRef ref) {
+    final user = ref.watch(authStateProvider).valueOrNull;
+    final nombre = user?.displayName ?? user?.email?.split('@')[0] ?? 'Usuario';
+
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E1E24),
+            shape: BoxShape.circle,
+            border: Border.all(color: const Color(0xFF2A2A35)),
           ),
-          const SizedBox(width: 12),
-          Column(
+          child: const Icon(
+            Icons.person,
+            color: Color(0xFF6B6B80),
+            size: 20,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Hola, $nombre 👋',
                 style: GoogleFonts.zenDots(
-                  fontSize: 18,
+                  fontSize: 15,
                   fontWeight: FontWeight.bold,
                   color: const Color(0xFFE8E8F0),
                 ),
+                overflow: TextOverflow.ellipsis,
               ),
               Text(
-                'Lunes · Día de pecho',
+                '${_diaSemana()} · Día de entrenamiento',
                 style: GoogleFonts.zenDots(
-                  fontSize: 13,
+                  fontSize: 11,
                   color: const Color(0xFF6B6B80),
                 ),
               ),
             ],
           ),
-        ],
-      ),
-      Container(
-        width: 40,
-        height: 40,
+        ),
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E1E24),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFF2A2A35)),
+          ),
+          child: const Icon(
+            Icons.notifications_none,
+            color: Color(0xFF6B6B80),
+            size: 20,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRutinaDelDia(BuildContext context, List<Routine> rutinas) {
+    if (rutinas.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: const Color(0xFF1E1E24),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(color: const Color(0xFF2A2A35)),
         ),
-        child: const Icon(
-          Icons.notifications_none,
-          color: Color(0xFF6B6B80),
-          size: 20,
+        child: Column(
+          children: [
+            Icon(Icons.fitness_center, color: const Color(0xFF6B6B80), size: 32),
+            const SizedBox(height: 8),
+            Text(
+              'Crea tu primera rutina',
+              style: GoogleFonts.zenDots(
+                fontSize: 12,
+                color: const Color(0xFF6B6B80),
+              ),
+            ),
+          ],
         ),
-      ),
-    ],
-  );
-}
+      );
+    }
 
-  Widget _buildRutinaDelDia(BuildContext context) {
+    final rutina = rutinas.first;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -124,7 +184,7 @@ class HomeScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Pecho + Tríceps',
+                    rutina.nombre,
                     style: GoogleFonts.zenDots(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -133,7 +193,7 @@ class HomeScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '6 ejercicios · 45 min',
+                    '${rutina.totalEjercicios} ejercicios · ${rutina.duracionEstimadaMinutos} min',
                     style: GoogleFonts.zenDots(
                       fontSize: 13,
                       color: const Color(0xFF6B6B80),
@@ -142,14 +202,11 @@ class HomeScreen extends ConsumerWidget {
                 ],
               ),
               ElevatedButton(
-                onPressed: () => context.push('/workout'),
+                onPressed: () => context.push('/workout', extra: rutina),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFC8F135),
                   foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 10,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -169,12 +226,16 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEstadisticas() {
+  Widget _buildEstadisticas(List<Map<String, dynamic>> historial) {
+    final workoutsEstaSemana = _workoutsEstaSemana(historial);
+    final totalMinutos = workoutsEstaSemana.fold<int>(0, (sum, w) => sum + (w['duracionMinutos'] as int? ?? 0));
+    final totalEjercicios = workoutsEstaSemana.fold<int>(0, (sum, w) => sum + (w['ejerciciosCompletados'] as int? ?? 0));
+
     final stats = [
-      {'icon': Icons.local_fire_department, 'value': '320', 'label': 'Calorías', 'color': const Color(0xFFC8F135)},
-      {'icon': Icons.favorite, 'value': '78', 'label': 'BPM prom', 'color': const Color(0xFFFF4D6D)},
-      {'icon': Icons.timer, 'value': '42m', 'label': 'Tiempo', 'color': const Color(0xFFE8E8F0)},
-      {'icon': Icons.fitness_center, 'value': '6', 'label': 'Ejercicios', 'color': const Color(0xFFC8F135)},
+      {'icon': Icons.local_fire_department, 'value': '$totalMinutos', 'label': 'Min esta semana', 'color': const Color(0xFFC8F135)},
+      {'icon': Icons.timer, 'value': '${workoutsEstaSemana.length}', 'label': 'Entrenos', 'color': const Color(0xFFE8E8F0)},
+      {'icon': Icons.fitness_center, 'value': '$totalEjercicios', 'label': 'Ejercicios', 'color': const Color(0xFFC8F135)},
+      {'icon': Icons.calendar_today, 'value': '${historial.length}', 'label': 'Total workouts', 'color': const Color(0xFFE8E8F0)},
     ];
 
     return Column(
@@ -212,11 +273,7 @@ class HomeScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Icon(
-                    stat['icon'] as IconData,
-                    color: stat['color'] as Color,
-                    size: 18,
-                  ),
+                  Icon(stat['icon'] as IconData, color: stat['color'] as Color, size: 18),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -246,18 +303,31 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildProximosEjercicios() {
-    final ejercicios = [
-      {'nombre': 'Press de Banca', 'detalle': '4 series · 12 reps'},
-      {'nombre': 'Aperturas', 'detalle': '3 series · 15 reps'},
-      {'nombre': 'Fondos en paralelas', 'detalle': '3 series · 10 reps'},
-    ];
+  List<Map<String, dynamic>> _workoutsEstaSemana(List<Map<String, dynamic>> historial) {
+    final now = DateTime.now();
+    final inicioSemana = now.subtract(Duration(days: now.weekday - 1));
+    return historial.where((w) {
+      final fecha = (w['fecha'] as dynamic);
+      if (fecha == null) return false;
+      if (fecha is Timestamp) {
+        return fecha.toDate().isAfter(inicioSemana);
+      }
+      return false;
+    }).toList();
+  }
+
+  Widget _buildProximosEjercicios(List<Routine> rutinas) {
+    if (rutinas.isEmpty || rutinas.first.ejercicios.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final ejercicios = rutinas.first.ejercicios;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Próximos ejercicios',
+          '${rutinas.first.nombre} · Ejercicios',
           style: GoogleFonts.zenDots(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -289,76 +359,40 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 14),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    e['nombre']!,
-                    style: GoogleFonts.zenDots(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFFE8E8F0),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      e.nombre,
+                      style: GoogleFonts.zenDots(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFFE8E8F0),
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  Text(
-                    e['detalle']!,
-                    style: GoogleFonts.zenDots(
-                      fontSize: 13,
-                      color: const Color(0xFF6B6B80),
+                    Text(
+                      '${e.series} series · ${e.reps} reps',
+                      style: GoogleFonts.zenDots(
+                        fontSize: 13,
+                        color: const Color(0xFF6B6B80),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const Spacer(),
-              const Icon(
-                Icons.chevron_right,
-                color: Color(0xFF6B6B80),
+              Text(
+                '${e.descansoSegundos}s',
+                style: GoogleFonts.zenDots(
+                  fontSize: 11,
+                  color: const Color(0xFF6B6B80),
+                ),
               ),
             ],
           ),
         )),
-      ],
-    );
-  }
-
-  Widget _buildNavbar(BuildContext context) {
-    return Container(
-      height: 70,
-      decoration: const BoxDecoration(
-        color: Color(0xFF16161A),
-        border: Border(
-          top: BorderSide(color: Color(0xFF2A2A35)),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _navItem(Icons.home_rounded, 'Inicio', true),
-          _navItem(Icons.fitness_center, 'Rutinas', false),
-          _navItem(Icons.bar_chart, 'Progreso', false),
-          _navItem(Icons.person, 'Perfil', false),
-        ],
-      ),
-    );
-  }
-
-  Widget _navItem(IconData icon, String label, bool active) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(
-          icon,
-          color: active ? const Color(0xFFC8F135) : const Color(0xFF6B6B80),
-          size: 22,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: GoogleFonts.zenDots(
-            fontSize: 11,
-            color: active ? const Color(0xFFC8F135) : const Color(0xFF6B6B80),
-          ),
-        ),
       ],
     );
   }
