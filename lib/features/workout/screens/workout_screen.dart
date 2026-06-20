@@ -1,26 +1,29 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/models/routine.dart';
 import '../../../core/models/exercise.dart';
+import '../../../core/providers/auth_provider.dart';
 
-class WorkoutScreen extends StatefulWidget {
+class WorkoutScreen extends ConsumerStatefulWidget {
   final Routine? routine;
 
   const WorkoutScreen({super.key, this.routine});
 
   @override
-  State<WorkoutScreen> createState() => _WorkoutScreenState();
+  ConsumerState<WorkoutScreen> createState() => _WorkoutScreenState();
 }
 
-class _WorkoutScreenState extends State<WorkoutScreen> {
+class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
   late final List<RoutineExercise> _ejercicios;
   int _serieActual = 1;
   int _ejercicioActual = 0;
   int _segundosDescanso = 90;
   bool _descansando = false;
   Timer? _timer;
+  late final DateTime _inicio;
 
   RoutineExercise get _ejercicioActualData => _ejercicios[_ejercicioActual];
   int get _totalSeries => _ejercicioActualData.series;
@@ -29,6 +32,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   void initState() {
     super.initState();
     _ejercicios = widget.routine?.ejercicios ?? [];
+    _inicio = DateTime.now();
     if (_ejercicios.isNotEmpty) {
       _segundosDescanso = _ejercicios.first.descansoSegundos;
     }
@@ -124,7 +128,20 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     );
   }
 
+  void _guardarEnHistorial() {
+    final user = ref.read(authStateProvider).valueOrNull;
+    if (user == null) return;
+    final duracion = DateTime.now().difference(_inicio).inMinutes;
+    ref.read(firestoreServiceProvider).guardarWorkoutCompletado(
+      uid: user.uid,
+      nombreRutina: widget.routine?.nombre ?? 'Rutina',
+      duracionMinutos: duracion < 1 ? 1 : duracion,
+      ejerciciosCompletados: _ejercicios.length,
+    );
+  }
+
   void _mostrarResumen() {
+    _guardarEnHistorial();
     showDialog(
       context: context,
       barrierDismissible: false,
