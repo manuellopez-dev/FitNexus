@@ -202,26 +202,183 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
                   ],
                 ),
               ),
-              GestureDetector(
-                onTap: () => context.push('/workout', extra: rutina),
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFC8F135),
-                    shape: BoxShape.circle,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildMenu(rutina),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => context.push('/workout', extra: rutina),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFC8F135),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.play_arrow_rounded,
+                        color: Colors.black,
+                        size: 20,
+                      ),
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.play_arrow_rounded,
-                    color: Colors.black,
-                    size: 20,
-                  ),
-                ),
+                ],
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildMenu(Routine rutina) {
+    return PopupMenuButton<String>(
+      color: const Color(0xFF1E1E24),
+      icon: const Icon(Icons.more_horiz, color: Color(0xFF6B6B80), size: 20),
+      onSelected: (value) {
+        if (value == 'editar') {
+          _mostrarDialogoEditarRutina(rutina);
+        } else if (value == 'eliminar') {
+          _confirmarEliminarRutina(rutina);
+        }
+      },
+      itemBuilder: (_) => [
+        const PopupMenuItem(
+          value: 'editar',
+          child: Row(
+            children: [
+              Icon(Icons.edit, color: Color(0xFFE8E8F0), size: 18),
+              SizedBox(width: 10),
+              Text('Editar', style: TextStyle(color: Color(0xFFE8E8F0))),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'eliminar',
+          child: Row(
+            children: [
+              Icon(Icons.delete, color: Color(0xFFFF4D6D), size: 18),
+              SizedBox(width: 10),
+              Text('Eliminar', style: TextStyle(color: Color(0xFFFF4D6D))),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _mostrarDialogoEditarRutina(Routine rutina) {
+    final controller = TextEditingController(text: rutina.nombre);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF16161A),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Text(
+          'Editar nombre',
+          style: GoogleFonts.zenDots(
+            fontSize: 16,
+            color: const Color(0xFFE8E8F0),
+          ),
+        ),
+        content: TextField(
+          controller: controller,
+          style: GoogleFonts.zenDots(color: const Color(0xFFE8E8F0)),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: const Color(0xFF1E1E24),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFF2A2A35)),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              'Cancelar',
+              style: GoogleFonts.zenDots(color: const Color(0xFF6B6B80)),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              final nuevo = controller.text.trim();
+              if (nuevo.isEmpty) return;
+              final user = ref.read(authStateProvider).valueOrNull;
+              if (user != null) {
+                await ref
+                    .read(firestoreServiceProvider)
+                    .actualizarRutina(user.uid, rutina.id, {'nombre': nuevo});
+              }
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+            child: Text(
+              'Guardar',
+              style: GoogleFonts.zenDots(
+                color: const Color(0xFFC8F135),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmarEliminarRutina(Routine rutina) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF16161A),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Text(
+          '¿Eliminar rutina?',
+          style: GoogleFonts.zenDots(
+            fontSize: 16,
+            color: const Color(0xFFE8E8F0),
+          ),
+        ),
+        content: Text(
+          'Se eliminará "${rutina.nombre}" permanentemente.',
+          style: GoogleFonts.zenDots(
+            fontSize: 13,
+            color: const Color(0xFF6B6B80),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              'Cancelar',
+              style: GoogleFonts.zenDots(color: const Color(0xFF6B6B80)),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              final user = ref.read(authStateProvider).valueOrNull;
+              if (user != null) {
+                await ref
+                    .read(firestoreServiceProvider)
+                    .eliminarRutina(user.uid, rutina.id);
+              }
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+            child: Text(
+              'Eliminar',
+              style: GoogleFonts.zenDots(
+                color: const Color(0xFFFF4D6D),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

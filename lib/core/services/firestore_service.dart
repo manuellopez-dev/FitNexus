@@ -54,6 +54,25 @@ class FirestoreService {
         .add(rutina.toMap());
   }
 
+  Future<void> actualizarRutina(
+      String uid, String rutinaId, Map<String, dynamic> datos) async {
+    await _db
+        .collection('usuarios')
+        .doc(uid)
+        .collection('rutinas')
+        .doc(rutinaId)
+        .update(datos);
+  }
+
+  Future<void> eliminarRutina(String uid, String rutinaId) async {
+    await _db
+        .collection('usuarios')
+        .doc(uid)
+        .collection('rutinas')
+        .doc(rutinaId)
+        .delete();
+  }
+
   // Crea las rutinas iniciales solo si el usuario no tiene ninguna
   Future<void> sembrarRutinasIniciales(String uid) async {
     final rutinasRef = _db.collection('usuarios').doc(uid).collection('rutinas');
