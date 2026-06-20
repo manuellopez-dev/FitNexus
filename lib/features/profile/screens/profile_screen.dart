@@ -27,7 +27,7 @@ class ProfileScreen extends ConsumerWidget {
               _buildAvatar(ref),
               const SizedBox(height: 24),
               perfilAsync.when(
-                data: (perfil) => _buildMetas(perfil),
+                data: (perfil) => _buildMetas(context, ref, perfil),
                 loading: () => const SizedBox.shrink(),
                 error: (_, __) => const SizedBox.shrink(),
               ),
@@ -105,7 +105,78 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMetas(dynamic perfil) {
+  void _mostrarEditarMeta(
+    BuildContext context, WidgetRef ref, String uid, String campo,
+    String titulo, String unidad, dynamic valorActual,
+    bool esDouble,
+  ) {
+    final controller = TextEditingController(text: '$valorActual');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF16161A),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Text(
+          titulo,
+          style: GoogleFonts.zenDots(
+            fontSize: 16,
+            color: const Color(0xFFE8E8F0),
+          ),
+        ),
+        content: TextField(
+          controller: controller,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          style: GoogleFonts.zenDots(color: const Color(0xFFE8E8F0)),
+          decoration: InputDecoration(
+            suffixText: unidad,
+            suffixStyle: GoogleFonts.zenDots(color: const Color(0xFF6B6B80)),
+            filled: true,
+            fillColor: const Color(0xFF1E1E24),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFF2A2A35)),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              'Cancelar',
+              style: GoogleFonts.zenDots(color: const Color(0xFF6B6B80)),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              final texto = controller.text.trim();
+              if (texto.isEmpty) return;
+              final valor = esDouble
+                  ? double.tryParse(texto) ?? 0.0
+                  : int.tryParse(texto) ?? 0;
+              await ref.read(firestoreServiceProvider).actualizarPerfil(
+                uid,
+                {campo: valor},
+              );
+              ref.invalidate(perfilProvider);
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+            child: Text(
+              'Guardar',
+              style: GoogleFonts.zenDots(
+                color: const Color(0xFFC8F135),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetas(BuildContext context, WidgetRef ref, dynamic perfil) {
+    final uid = ref.watch(authStateProvider).valueOrNull?.uid ?? '';
     final peso = perfil?.pesoObjetivo ?? 0;
     final calorias = perfil?.caloriasObjetivo ?? 500;
     final dias = perfil?.diasPorSemana ?? 5;
@@ -123,25 +194,43 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 12),
-        _metaCard(
-          label: 'Peso objetivo',
-          valor: peso > 0 ? '$peso kg' : '—',
-          progreso: peso > 0 ? 0.5 : 0,
-          actual: peso > 0 ? 'Meta establecida' : 'Sin definir',
+        GestureDetector(
+          onTap: () => _mostrarEditarMeta(
+            context, ref, uid, 'pesoObjetivo',
+            'Peso objetivo', 'kg', peso, true,
+          ),
+          child: _metaCard(
+            label: 'Peso objetivo',
+            valor: peso > 0 ? '$peso kg' : '—',
+            progreso: peso > 0 ? 0.5 : 0,
+            actual: peso > 0 ? 'Toca para editar' : 'Toca para definir',
+          ),
         ),
         const SizedBox(height: 10),
-        _metaCard(
-          label: 'Días activos / semana',
-          valor: '$dias días',
-          progreso: dias > 0 ? (activos / dias).clamp(0.0, 1.0) : 0,
-          actual: '$activos completados',
+        GestureDetector(
+          onTap: () => _mostrarEditarMeta(
+            context, ref, uid, 'diasPorSemana',
+            'Días por semana', 'días', dias, false,
+          ),
+          child: _metaCard(
+            label: 'Días activos / semana',
+            valor: '$dias días',
+            progreso: dias > 0 ? (activos / dias).clamp(0.0, 1.0) : 0,
+            actual: '$activos completados — Toca para editar',
+          ),
         ),
         const SizedBox(height: 10),
-        _metaCard(
-          label: 'Calorías diarias',
-          valor: '$calorias kcal',
-          progreso: 0.0,
-          actual: 'Meta diaria',
+        GestureDetector(
+          onTap: () => _mostrarEditarMeta(
+            context, ref, uid, 'caloriasObjetivo',
+            'Calorías diarias', 'kcal', calorias, false,
+          ),
+          child: _metaCard(
+            label: 'Calorías diarias',
+            valor: '$calorias kcal',
+            progreso: 0.0,
+            actual: 'Toca para editar',
+          ),
         ),
       ],
     );
