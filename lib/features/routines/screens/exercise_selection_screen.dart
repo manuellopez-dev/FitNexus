@@ -5,15 +5,18 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/models/exercise.dart';
 import '../../../core/models/routine.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/widgets/snackbar_helper.dart';
 
 class ExerciseSelectionScreen extends ConsumerStatefulWidget {
   final String routineName;
   final String routineType;
+  final Routine? existingRoutine;
 
   const ExerciseSelectionScreen({
     super.key,
     required this.routineName,
     this.routineType = 'Fuerza',
+    this.existingRoutine,
   });
 
   @override
@@ -25,6 +28,14 @@ class _ExerciseSelectionScreenState
     extends ConsumerState<ExerciseSelectionScreen> {
   final List<RoutineExercise> _selected = [];
   String? _musculoSeleccionado;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.existingRoutine != null) {
+      _selected.addAll(widget.existingRoutine!.ejercicios);
+    }
+  }
 
   List<ExerciseCatalogItem> _filtrarPorMusculo(
       List<ExerciseCatalogItem> catalogo) {
@@ -109,26 +120,35 @@ class _ExerciseSelectionScreenState
     final user = ref.read(authStateProvider).valueOrNull;
     if (user == null) return;
 
-    final rutina = Routine(
-      id: '',
-      nombre: widget.routineName,
-      tipo: widget.routineType,
-      ejercicios: _selected,
-    );
+    final isEdit = widget.existingRoutine != null;
 
     try {
-      await ref.read(firestoreServiceProvider).crearRutina(user.uid, rutina);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Rutina creada')),
+      if (isEdit) {
+        await ref.read(firestoreServiceProvider).actualizarRutina(
+          user.uid,
+          widget.existingRoutine!.id,
+          {
+            'nombre': widget.routineName,
+            'tipo': widget.routineType,
+            'ejercicios': _selected.map((e) => e.toMap()).toList(),
+          },
         );
+      } else {
+        final rutina = Routine(
+          id: '',
+          nombre: widget.routineName,
+          tipo: widget.routineType,
+          ejercicios: _selected,
+        );
+        await ref.read(firestoreServiceProvider).crearRutina(user.uid, rutina);
+      }
+      if (context.mounted) {
+        showSuccessSnackBar(context, isEdit ? 'Rutina actualizada' : 'Rutina creada');
         context.pop();
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al crear rutina: $e'), backgroundColor: const Color(0xFFFF4D6D)),
-        );
+        showErrorSnackBar(context, 'Error: $e');
       }
     }
   }
@@ -415,7 +435,9 @@ class _ExerciseSelectionScreenState
                 ),
               ),
               child: Text(
-                'Guardar rutina',
+                widget.existingRoutine != null
+                    ? 'Actualizar rutina'
+                    : 'Guardar rutina',
                 style: GoogleFonts.zenDots(
                   fontWeight: FontWeight.bold,
                   fontSize: 13,

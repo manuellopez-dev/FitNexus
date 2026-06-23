@@ -6,7 +6,15 @@ import 'package:go_router/go_router.dart';
 import '../../../core/models/routine.dart';
 import '../../../core/models/exercise.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/widgets/snackbar_helper.dart';
 import '../../../core/data/exercise_gif_mapping.dart';
+
+class _SetLog {
+  final int setNumber;
+  final double weight;
+  final int reps;
+  _SetLog({required this.setNumber, required this.weight, required this.reps});
+}
 
 class WorkoutScreen extends ConsumerStatefulWidget {
   final Routine? routine;
@@ -32,6 +40,12 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   late final AnimationController _pulsoCtrl;
   late final Animation<double> _pulsoAnim;
 
+  final _weightCtrl = TextEditingController();
+  final _repsCtrl = TextEditingController();
+
+  // Log de series completadas: [ejercicioIndex][serieIndex] = (peso, reps)
+  final List<List<_SetLog>> _setsLog = [];
+
   RoutineExercise get _ejercicioActualData => _ejercicios[_ejercicioActual];
   int get _totalSeries => _ejercicioActualData.series;
 
@@ -42,6 +56,11 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     _inicio = DateTime.now();
     if (_ejercicios.isNotEmpty) {
       _segundosDescanso = _ejercicios.first.descansoSegundos;
+    }
+    _weightCtrl.text = '';
+    _repsCtrl.text = '';
+    for (int i = 0; i < _ejercicios.length; i++) {
+      _setsLog.add([]);
     }
     _cronometro = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
@@ -62,7 +81,14 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     _timer?.cancel();
     _cronometro?.cancel();
     _pulsoCtrl.dispose();
+    _weightCtrl.dispose();
+    _repsCtrl.dispose();
     super.dispose();
+  }
+
+  void _resetInputs() {
+    _weightCtrl.text = '';
+    _repsCtrl.text = '';
   }
 
   void _iniciarDescanso() {
@@ -83,6 +109,15 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   }
 
   void _serieCompletada() {
+    final peso = double.tryParse(_weightCtrl.text) ?? 0;
+    final reps = int.tryParse(_repsCtrl.text) ?? 0;
+    _setsLog[_ejercicioActual].add(_SetLog(
+      setNumber: _serieActual,
+      weight: peso,
+      reps: reps > 0 ? reps : _ejercicioActualData.reps,
+    ));
+    _resetInputs();
+
     if (_serieActual < _totalSeries) {
       _iniciarDescanso();
       setState(() => _serieActual++);
@@ -162,12 +197,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al guardar historial: $e'),
-            backgroundColor: const Color(0xFFFF4D6D),
-          ),
-        );
+        showErrorSnackBar(context, 'Error al guardar historial: $e');
       }
     }
   }
@@ -470,32 +500,6 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   }
 
   Widget _buildCardSeriesReps() {
-    return Row(
-      children: [
-        Expanded(
-          child: _statCard(
-            valor: '$_serieActual',
-            label: 'Series',
-            color: const Color(0xFFC8F135),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _statCard(
-            valor: '${_ejercicioActualData.reps}',
-            label: 'Repeticiones',
-            color: const Color(0xFFE8E8F0),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _statCard({
-    required String valor,
-    required String label,
-    required Color color,
-  }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -505,22 +509,109 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
       ),
       child: Column(
         children: [
-          Text(
-            valor,
-            style: GoogleFonts.zenDots(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  children: [
+                    Text(
+                      '$_serieActual / $_totalSeries',
+                      style: GoogleFonts.zenDots(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFFC8F135),
+                      ),
+                    ),
+                    Text(
+                      'Series',
+                      style: GoogleFonts.zenDots(
+                        fontSize: 11,
+                        color: const Color(0xFF6B6B80),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: TextField(
+                  controller: _weightCtrl,
+                  keyboardType: TextInputType.number,
+                  style: GoogleFonts.zenDots(
+                    color: const Color(0xFFE8E8F0),
+                    fontSize: 16,
+                  ),
+                  textAlign: TextAlign.center,
+                  decoration: InputDecoration(
+                    hintText: 'Peso (kg)',
+                    hintStyle: GoogleFonts.zenDots(
+                      color: const Color(0xFF6B6B80),
+                      fontSize: 13,
+                    ),
+                    filled: true,
+                    fillColor: const Color(0xFF16161A),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFF2A2A35)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFC8F135)),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextField(
+                  controller: _repsCtrl,
+                  keyboardType: TextInputType.number,
+                  style: GoogleFonts.zenDots(
+                    color: const Color(0xFFE8E8F0),
+                    fontSize: 16,
+                  ),
+                  textAlign: TextAlign.center,
+                  decoration: InputDecoration(
+                    hintText: 'Reps',
+                    hintStyle: GoogleFonts.zenDots(
+                      color: const Color(0xFF6B6B80),
+                      fontSize: 13,
+                    ),
+                    filled: true,
+                    fillColor: const Color(0xFF16161A),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFF2A2A35)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFC8F135)),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           Text(
-            label,
+            'Ingresa peso y reps reales de esta serie',
             style: GoogleFonts.zenDots(
-              fontSize: 11,
+              fontSize: 10,
               color: const Color(0xFF6B6B80),
             ),
           ),
+          if (_setsLog[_ejercicioActual].isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ..._setsLog[_ejercicioActual].map((s) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                'Serie ${s.setNumber}: ${s.weight.toStringAsFixed(0)} kg × ${s.reps} reps',
+                style: GoogleFonts.zenDots(
+                  fontSize: 11,
+                  color: const Color(0xFFC8F135),
+                ),
+              ),
+            )),
+          ],
         ],
       ),
     );

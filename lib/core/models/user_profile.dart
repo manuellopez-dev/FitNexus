@@ -9,6 +9,8 @@ class UserProfile {
   final int diasPorSemana;
   final int diasActivos;
   final DateTime? fechaRegistro;
+  final List<int> diasEntrenamiento; // 1=lunes..7=domingo
+  final Map<String, String> rutinaPorDia; // {"1": "routineId", ...}
 
   UserProfile({
     required this.uid,
@@ -19,6 +21,8 @@ class UserProfile {
     this.diasPorSemana = 5,
     this.diasActivos = 0,
     this.fechaRegistro,
+    this.diasEntrenamiento = const [1, 3, 5],
+    this.rutinaPorDia = const {},
   });
 
   factory UserProfile.fromMap(Map<String, dynamic> map) {
@@ -31,6 +35,8 @@ class UserProfile {
       diasPorSemana: map['diasPorSemana'] ?? 5,
       diasActivos: map['diasActivos'] ?? 0,
       fechaRegistro: (map['fechaRegistro'] as Timestamp?)?.toDate(),
+      diasEntrenamiento: (map['diasEntrenamiento'] as List<dynamic>? ?? [1, 3, 5]).cast<int>(),
+      rutinaPorDia: (map['rutinaPorDia'] as Map<String, dynamic>? ?? {}).map((k, v) => MapEntry(k, v as String)),
     );
   }
 
@@ -44,6 +50,8 @@ class UserProfile {
       'diasPorSemana': diasPorSemana,
       'diasActivos': diasActivos,
       'fechaRegistro': fechaRegistro,
+      'diasEntrenamiento': diasEntrenamiento,
+      'rutinaPorDia': rutinaPorDia,
     };
   }
 }

@@ -17,6 +17,7 @@ class HomeScreen extends ConsumerWidget {
     final rutinasAsync = ref.watch(rutinasProvider);
     final historialAsync = ref.watch(historialProvider);
     final historialSemanalAsync = ref.watch(historialSemanalProvider);
+    final perfilAsync = ref.watch(perfilProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0F),
@@ -30,14 +31,18 @@ class HomeScreen extends ConsumerWidget {
               _buildHeader(ref),
               const SizedBox(height: 24),
               rutinasAsync.when(
-                data: (rutinas) => _buildRutinaDelDia(context, rutinas),
+                data: (rutinas) => perfilAsync.when(
+                  data: (perfil) => _buildRutinaDelDia(context, rutinas, perfil),
+                  loading: () => _buildCardPlaceholder(),
+                  error: (_, __) => _buildRutinaDelDia(context, rutinas, null),
+                ),
                 loading: _buildCardPlaceholder,
                 error: (_, __) => const SizedBox.shrink(),
               ),
               const SizedBox(height: 24),
               historialSemanalAsync.when(
                 data: (semanal) => historialAsync.when(
-                  data: (total) => _buildEstadisticas(semanal, total.length),
+                  data: (total) => _buildEstadisticas(context, semanal, total.length),
                   loading: () => const SizedBox.shrink(),
                   error: (_, __) => const SizedBox.shrink(),
                 ),
@@ -46,7 +51,11 @@ class HomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
               rutinasAsync.when(
-                data: (rutinas) => _buildProximosEjercicios(rutinas),
+                data: (rutinas) => perfilAsync.when(
+                  data: (perfil) => _buildProximosEjercicios(rutinas, perfil),
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, __) => _buildProximosEjercicios(rutinas, null),
+                ),
                 loading: () => const SizedBox.shrink(),
                 error: (_, __) => const SizedBox.shrink(),
               ),
@@ -133,7 +142,7 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildRutinaDelDia(BuildContext context, List<Routine> rutinas) {
+  Widget _buildRutinaDelDia(BuildContext context, List<Routine> rutinas, dynamic perfil) {
     if (rutinas.isEmpty) {
       return Container(
         width: double.infinity,
@@ -159,7 +168,16 @@ class HomeScreen extends ConsumerWidget {
       );
     }
 
-    final rutina = rutinas.first;
+    // Buscar rutina asignada al día de hoy
+    final hoy = DateTime.now().weekday; // 1=lunes
+    final rutinaPorDia = (perfil?.rutinaPorDia as Map<String, dynamic>?) ?? {};
+    final rutinaIdHoy = rutinaPorDia[hoy.toString()] as String?;
+    final rutina = rutinaIdHoy != null && rutinaIdHoy.isNotEmpty
+        ? rutinas.where((r) => r.id == rutinaIdHoy).firstOrNull
+        : null;
+
+    // Fallback: si no hay asignación, mostrar la primera rutina
+    final rutinaFinal = rutina ?? rutinas.first;
 
     return Container(
       width: double.infinity,
@@ -173,7 +191,7 @@ class HomeScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Rutina del día',
+            rutina != null ? 'Rutina de hoy' : 'Rutina del día',
             style: GoogleFonts.zenDots(
               fontSize: 12,
               color: const Color(0xFF6B6B80),
@@ -187,7 +205,7 @@ class HomeScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    rutina.nombre,
+                    rutinaFinal.nombre,
                     style: GoogleFonts.zenDots(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -196,7 +214,7 @@ class HomeScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${rutina.totalEjercicios} ejercicios · ${rutina.duracionEstimadaMinutos} min',
+                    '${rutinaFinal.totalEjercicios} ejercicios · ${rutinaFinal.duracionEstimadaMinutos} min',
                     style: GoogleFonts.zenDots(
                       fontSize: 13,
                       color: const Color(0xFF6B6B80),
@@ -205,7 +223,7 @@ class HomeScreen extends ConsumerWidget {
                 ],
               ),
               ElevatedButton(
-                onPressed: () => context.push('/workout', extra: rutina),
+                onPressed: () => context.push('/workout', extra: rutinaFinal),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFC8F135),
                   foregroundColor: Colors.black,
@@ -229,7 +247,7 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEstadisticas(List<Map<String, dynamic>> semanal, int total) {
+  Widget _buildEstadisticas(BuildContext context, List<Map<String, dynamic>> semanal, int total) {
     final totalMinutos = semanal.fold<int>(0, (sum, w) => sum + (w['duracionMinutos'] as int? ?? 0));
     final totalEjercicios = semanal.fold<int>(0, (sum, w) => sum + (w['ejerciciosCompletados'] as int? ?? 0));
 
@@ -240,19 +258,27 @@ class HomeScreen extends ConsumerWidget {
       {'icon': Icons.calendar_today, 'value': '$total', 'label': 'Total workouts', 'color': const Color(0xFFE8E8F0)},
     ];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Estadísticas',
-          style: GoogleFonts.zenDots(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: const Color(0xFFE8E8F0),
+    return GestureDetector(
+      onTap: () => context.push('/progress'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Estadísticas',
+                style: GoogleFonts.zenDots(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFFE8E8F0),
+                ),
+              ),
+              Icon(Icons.chevron_right, color: const Color(0xFF6B6B80), size: 20),
+            ],
           ),
-        ),
-        const SizedBox(height: 12),
-        GridView.builder(
+          const SizedBox(height: 12),
+          GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -302,21 +328,30 @@ class HomeScreen extends ConsumerWidget {
           },
         ),
       ],
+      ),
     );
   }
 
-  Widget _buildProximosEjercicios(List<Routine> rutinas) {
-    if (rutinas.isEmpty || rutinas.first.ejercicios.isEmpty) {
-      return const SizedBox.shrink();
-    }
+  Widget _buildProximosEjercicios(List<Routine> rutinas, dynamic perfil) {
+    if (rutinas.isEmpty) return const SizedBox.shrink();
 
-    final ejercicios = rutinas.first.ejercicios;
+    final hoy = DateTime.now().weekday;
+    final rutinaPorDia = (perfil?.rutinaPorDia as Map<String, dynamic>?) ?? {};
+    final rutinaIdHoy = rutinaPorDia[hoy.toString()] as String?;
+    final rutina = rutinaIdHoy != null && rutinaIdHoy.isNotEmpty
+        ? rutinas.where((r) => r.id == rutinaIdHoy).firstOrNull
+        : null;
+    final rutinaFinal = rutina ?? rutinas.first;
+
+    if (rutinaFinal.ejercicios.isEmpty) return const SizedBox.shrink();
+
+    final ejercicios = rutinaFinal.ejercicios;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '${rutinas.first.nombre} · Ejercicios',
+          '${rutinaFinal.nombre} · Ejercicios',
           style: GoogleFonts.zenDots(
             fontSize: 16,
             fontWeight: FontWeight.bold,

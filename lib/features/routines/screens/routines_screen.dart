@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/models/routine.dart';
+import '../../../core/widgets/snackbar_helper.dart';
 
 class RoutinesScreen extends ConsumerStatefulWidget {
   const RoutinesScreen({super.key});
@@ -237,20 +238,32 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
       color: const Color(0xFF1E1E24),
       icon: const Icon(Icons.more_horiz, color: Color(0xFF6B6B80), size: 20),
       onSelected: (value) {
-        if (value == 'editar') {
+        if (value == 'renombrar') {
           _mostrarDialogoEditarRutina(rutina);
+        } else if (value == 'editar') {
+          context.push('/exercise-selection', extra: rutina);
         } else if (value == 'eliminar') {
           _confirmarEliminarRutina(rutina);
         }
       },
       itemBuilder: (_) => [
         const PopupMenuItem(
-          value: 'editar',
+          value: 'renombrar',
           child: Row(
             children: [
               Icon(Icons.edit, color: Color(0xFFE8E8F0), size: 18),
               SizedBox(width: 10),
-              Text('Editar', style: TextStyle(color: Color(0xFFE8E8F0))),
+              Text('Renombrar', style: TextStyle(color: Color(0xFFE8E8F0))),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'editar',
+          child: Row(
+            children: [
+              Icon(Icons.list_alt, color: Color(0xFFC8F135), size: 18),
+              SizedBox(width: 10),
+              Text('Editar ejercicios', style: TextStyle(color: Color(0xFFC8F135))),
             ],
           ),
         ),
@@ -315,15 +328,11 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
                       .read(firestoreServiceProvider)
                       .actualizarRutina(user.uid, rutina.id, {'nombre': nuevo});
                   if (ctx.mounted) {
-                    ScaffoldMessenger.of(ctx).showSnackBar(
-                      const SnackBar(content: Text('Rutina actualizada')),
-                    );
+                    showSuccessSnackBar(ctx, 'Rutina actualizada');
                   }
                 } catch (e) {
                   if (ctx.mounted) {
-                    ScaffoldMessenger.of(ctx).showSnackBar(
-                      SnackBar(content: Text('Error: $e'), backgroundColor: const Color(0xFFFF4D6D)),
-                    );
+                    showErrorSnackBar(ctx, 'Error: $e');
                   }
                   return;
                 }
@@ -383,9 +392,7 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
                       .eliminarRutina(user.uid, rutina.id);
                 } catch (e) {
                   if (ctx.mounted) {
-                    ScaffoldMessenger.of(ctx).showSnackBar(
-                      SnackBar(content: Text('Error: $e'), backgroundColor: const Color(0xFFFF4D6D)),
-                    );
+                    showErrorSnackBar(ctx, 'Error: $e');
                   }
                   return;
                 }

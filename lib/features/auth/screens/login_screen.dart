@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/widgets/snackbar_helper.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -16,7 +17,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _nombreController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   bool _isLoading = false;
   bool _isRegistrando = false;
   String? _errorMessage;
@@ -26,6 +29,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _nombreController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -37,6 +41,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   if (_isRegistrando && _nombreController.text.isEmpty) {
     setState(() => _errorMessage = 'Por favor ingresa tu nombre');
+    return;
+  }
+
+  if (_isRegistrando &&
+      _passwordController.text != _confirmPasswordController.text) {
+    setState(() => _errorMessage = 'Las contraseñas no coinciden');
     return;
   }
 
@@ -78,6 +88,78 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (mounted) setState(() => _isLoading = false);
   }
 }
+
+  void _mostrarDialogoReset() {
+    final emailCtl = TextEditingController(text: _emailController.text);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF16161A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Restablecer contraseña',
+          style: GoogleFonts.zenDots(
+            fontSize: 16,
+            color: const Color(0xFFE8E8F0),
+          ),
+        ),
+        content: TextField(
+          controller: emailCtl,
+          keyboardType: TextInputType.emailAddress,
+          style: GoogleFonts.zenDots(color: const Color(0xFFE8E8F0), fontSize: 14),
+          decoration: InputDecoration(
+            hintText: 'Tu correo electrónico',
+            hintStyle: GoogleFonts.zenDots(color: const Color(0xFF6B6B80), fontSize: 13),
+            filled: true,
+            fillColor: const Color(0xFF1E1E24),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFF2A2A35)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFFC8F135)),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              'Cancelar',
+              style: GoogleFonts.zenDots(color: const Color(0xFF6B6B80), fontSize: 13),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final email = emailCtl.text.trim();
+              if (email.isEmpty) return;
+              try {
+                await ref.read(authServiceProvider).resetPassword(email);
+                if (ctx.mounted) {
+                  Navigator.pop(ctx);
+                  showSuccessSnackBar(context, 'Correo de recuperación enviado');
+                }
+              } catch (e) {
+                if (ctx.mounted) {
+                  showErrorSnackBar(context, 'Error: $e');
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFC8F135),
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: Text(
+              'Enviar',
+              style: GoogleFonts.zenDots(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   String _traducirError(FirebaseAuthException e) {
     switch (e.code) {
@@ -281,6 +363,79 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
               ),
+              // Confirmar contraseña (solo registro)
+              if (_isRegistrando) ...[
+                const SizedBox(height: 20),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Confirmar contraseña',
+                    style: GoogleFonts.zenDots(
+                      fontSize: 13,
+                      color: const Color(0xFF6B6B80),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _confirmPasswordController,
+                  obscureText: _obscureConfirmPassword,
+                  style: GoogleFonts.zenDots(
+                    color: const Color(0xFFE8E8F0),
+                    fontSize: 15,
+                  ),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: const Color(0xFF1E1E24),
+                    hintText: '••••••••',
+                    hintStyle: GoogleFonts.zenDots(
+                      color: const Color(0xFF6B6B80),
+                      fontSize: 14,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFF2A2A35)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFF2A2A35)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFFC8F135)),
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureConfirmPassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: const Color(0xFF6B6B80),
+                      ),
+                      onPressed: () => setState(
+                          () => _obscureConfirmPassword = !_obscureConfirmPassword),
+                    ),
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 8),
+
+              // Olvidé contraseña (solo login)
+              if (!_isRegistrando)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: GestureDetector(
+                    onTap: () => _mostrarDialogoReset(),
+                    child: Text(
+                      '¿Olvidaste tu contraseña?',
+                      style: GoogleFonts.zenDots(
+                        fontSize: 12,
+                        color: const Color(0xFFC8F135),
+                      ),
+                    ),
+                  ),
+                ),
+
               const SizedBox(height: 16),
 
               // Error message
@@ -357,6 +512,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     onTap: () => setState(() {
                       _isRegistrando = !_isRegistrando;
                       _errorMessage = null;
+                      _confirmPasswordController.clear();
                     }),
                     child: Text(
                       _isRegistrando ? 'Inicia sesión' : 'Regístrate',

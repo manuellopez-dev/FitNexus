@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/models/user_profile.dart';
+import '../../../core/models/routine.dart';
 import '../../../core/providers/auth_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -175,12 +177,15 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
+  static const _nombresDias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
   Widget _buildMetas(BuildContext context, WidgetRef ref, UserProfile? perfil) {
     final uid = ref.watch(authStateProvider).valueOrNull?.uid ?? '';
     final peso = perfil?.pesoObjetivo ?? 0;
     final calorias = perfil?.caloriasObjetivo ?? 500;
-    final dias = perfil?.diasPorSemana ?? 5;
     final activos = perfil?.diasActivos ?? 0;
+    final diasEntreno = perfil?.diasEntrenamiento ?? [1, 3, 5];
+    final rutinasAsync = ref.watch(rutinasProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -207,18 +212,7 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 10),
-        GestureDetector(
-          onTap: () => _mostrarEditarMeta(
-            context, ref, uid, 'diasPorSemana',
-            'Días por semana', 'días', dias, false,
-          ),
-          child: _metaCard(
-            label: 'Días activos / semana',
-            valor: '$dias días',
-            progreso: dias > 0 ? (activos / dias).clamp(0.0, 1.0) : 0,
-            actual: '$activos completados — Toca para editar',
-          ),
-        ),
+        _buildDiasEntrenamiento(context, ref, uid, diasEntreno, activos),
         const SizedBox(height: 10),
         GestureDetector(
           onTap: () => _mostrarEditarMeta(
@@ -232,7 +226,356 @@ class ProfileScreen extends ConsumerWidget {
             actual: 'Toca para editar',
           ),
         ),
+        const SizedBox(height: 24),
+        rutinasAsync.when(
+          data: (rutinas) => _buildRutinasPorDia(context, ref, uid, perfil, rutinas),
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const SizedBox.shrink(),
+        ),
       ],
+    );
+  }
+
+  Widget _buildDiasEntrenamiento(BuildContext context, WidgetRef ref, String uid, List<int> diasEntreno, int activos) {
+    final labels = diasEntreno.map((d) => _nombresDias[d - 1]).join(', ');
+
+    return GestureDetector(
+      onTap: () => _mostrarSelectorDias(context, ref, uid, diasEntreno.toList()),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E1E24),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF2A2A35)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Días de entrenamiento',
+                  style: GoogleFonts.zenDots(
+                    fontSize: 13,
+                    color: const Color(0xFF6B6B80),
+                  ),
+                ),
+                Text(
+                  '${diasEntreno.length} días',
+                  style: GoogleFonts.zenDots(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFFC8F135),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: List.generate(7, (i) {
+                final dia = i + 1;
+                final activo = diasEntreno.contains(dia);
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: activo ? const Color(0xFFC8F135) : const Color(0xFF2A2A35),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    _nombresDias[i].substring(0, 3),
+                    style: GoogleFonts.zenDots(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: activo ? Colors.black : const Color(0xFF6B6B80),
+                    ),
+                  ),
+                );
+              }),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '$activos completados — Toca para cambiar',
+              style: GoogleFonts.zenDots(
+                fontSize: 11,
+                color: const Color(0xFF6B6B80),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _mostrarSelectorDias(BuildContext context, WidgetRef ref, String uid, List<int> diasActuales) {
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final seleccion = diasActuales.toSet();
+          return AlertDialog(
+            backgroundColor: const Color(0xFF16161A),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Text(
+              'Días de entrenamiento',
+              style: GoogleFonts.zenDots(
+                fontSize: 16,
+                color: const Color(0xFFE8E8F0),
+              ),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(7, (i) {
+                final dia = i + 1;
+                final activo = seleccion.contains(dia);
+                return CheckboxListTile(
+                  title: Text(
+                    _nombresDias[i],
+                    style: GoogleFonts.zenDots(
+                      fontSize: 13,
+                      color: const Color(0xFFE8E8F0),
+                    ),
+                  ),
+                  value: activo,
+                  activeColor: const Color(0xFFC8F135),
+                  checkColor: Colors.black,
+                  onChanged: (_) {
+                    setDialogState(() {
+                      if (activo) {
+                        seleccion.remove(dia);
+                      } else {
+                        seleccion.add(dia);
+                      }
+                    });
+                  },
+                );
+              }),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(
+                  'Cancelar',
+                  style: GoogleFonts.zenDots(color: const Color(0xFF6B6B80), fontSize: 13),
+                ),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final lista = seleccion.toList()..sort();
+                  await ref.read(firestoreServiceProvider).actualizarPerfil(uid, {
+                    'diasEntrenamiento': lista,
+                    'diasPorSemana': lista.length,
+                  });
+                  ref.invalidate(perfilProvider);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                },
+                child: Text(
+                  'Guardar',
+                  style: GoogleFonts.zenDots(
+                    color: const Color(0xFFC8F135),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildRutinasPorDia(BuildContext context, WidgetRef ref, String uid, UserProfile? perfil, List<Routine> rutinas) {
+    final diasEntreno = perfil?.diasEntrenamiento ?? [];
+    final rutinaPorDia = Map<String, String>.from(perfil?.rutinaPorDia ?? {});
+
+    if (diasEntreno.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Rutinas por día',
+          style: GoogleFonts.zenDots(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFFE8E8F0),
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...diasEntreno.map((dia) {
+          final diaKey = dia.toString();
+          final rutinaId = rutinaPorDia[diaKey] ?? '';
+          final rutinaAsignada = rutinas.firstWhere(
+            (r) => r.id == rutinaId,
+            orElse: () => Routine(id: '', nombre: 'Sin asignar', tipo: '', ejercicios: []),
+          );
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E1E24),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFF2A2A35)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2A2A35),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Center(
+                    child: Text(
+                      _nombresDias[dia - 1].substring(0, 2),
+                      style: GoogleFonts.zenDots(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFFC8F135),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _nombresDias[dia - 1],
+                        style: GoogleFonts.zenDots(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFFE8E8F0),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        rutinaAsignada.nombre,
+                        style: GoogleFonts.zenDots(
+                          fontSize: 12,
+                          color: const Color(0xFF6B6B80),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => _mostrarSelectorRutina(context, ref, uid, dia, diaKey, rutinaPorDia[diaKey] ?? '', rutinas),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: rutinaId.isNotEmpty ? const Color(0xFFC8F135) : const Color(0xFF2A2A35),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      rutinaId.isNotEmpty ? 'Cambiar' : 'Asignar',
+                      style: GoogleFonts.zenDots(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: rutinaId.isNotEmpty ? Colors.black : const Color(0xFF6B6B80),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  void _mostrarSelectorRutina(BuildContext context, WidgetRef ref, String uid, int dia, String diaKey, String rutinaActualId, List<Routine> rutinas) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        String seleccionada = rutinaActualId;
+        return StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            backgroundColor: const Color(0xFF16161A),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Text(
+              '${_nombresDias[dia - 1]}',
+              style: GoogleFonts.zenDots(
+                fontSize: 16,
+                color: const Color(0xFFE8E8F0),
+              ),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final r in rutinas)
+                  RadioListTile<String>(
+                    title: Text(
+                      r.nombre,
+                      style: GoogleFonts.zenDots(
+                        fontSize: 13,
+                        color: const Color(0xFFE8E8F0),
+                      ),
+                    ),
+                    value: r.id,
+                    groupValue: seleccionada,
+                    activeColor: const Color(0xFFC8F135),
+                    onChanged: (val) {
+                      setDialogState(() => seleccionada = val!);
+                    },
+                  ),
+                RadioListTile<String>(
+                  title: Text(
+                    'Sin asignar',
+                    style: GoogleFonts.zenDots(
+                      fontSize: 13,
+                      color: const Color(0xFF6B6B80),
+                    ),
+                  ),
+                  value: '',
+                  groupValue: seleccionada,
+                  activeColor: const Color(0xFFC8F135),
+                  onChanged: (val) {
+                    setDialogState(() => seleccionada = val!);
+                  },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(
+                  'Cancelar',
+                  style: GoogleFonts.zenDots(color: const Color(0xFF6B6B80), fontSize: 13),
+                ),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final perfil = ref.read(perfilProvider).valueOrNull;
+                  final rutinaPorDia = Map<String, String>.from(perfil?.rutinaPorDia ?? {});
+                  rutinaPorDia[diaKey] = seleccionada;
+                  await ref.read(firestoreServiceProvider).actualizarPerfil(uid, {
+                    'rutinaPorDia': rutinaPorDia,
+                  });
+                  ref.invalidate(perfilProvider);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                },
+                child: Text(
+                  'Guardar',
+                  style: GoogleFonts.zenDots(
+                    color: const Color(0xFFC8F135),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -373,10 +716,10 @@ class ProfileScreen extends ConsumerWidget {
 
   Widget _buildConfiguracion(BuildContext context, WidgetRef ref) {
     final items = [
-      {'icon': Icons.notifications_none, 'label': 'Notificaciones'},
-      {'icon': Icons.watch, 'label': 'Dispositivos vinculados'},
-      {'icon': Icons.language, 'label': 'Idioma'},
-      {'icon': Icons.help_outline, 'label': 'Ayuda'},
+      {'icon': Icons.notifications_none, 'label': 'Notificaciones', 'section': 'notificaciones'},
+      {'icon': Icons.watch, 'label': 'Dispositivos vinculados', 'section': 'dispositivos'},
+      {'icon': Icons.language, 'label': 'Idioma', 'section': 'idioma'},
+      {'icon': Icons.help_outline, 'label': 'Ayuda', 'section': 'ayuda'},
     ];
 
     return Column(
@@ -417,7 +760,7 @@ class ProfileScreen extends ConsumerWidget {
                         color: Color(0xFF6B6B80),
                         size: 18,
                       ),
-                      onTap: () {},
+                      onTap: () => context.push('/settings/${item['section']}'),
                     ),
                     if (item != items.last)
                       const Divider(

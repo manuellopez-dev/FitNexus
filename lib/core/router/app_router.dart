@@ -4,6 +4,9 @@ import '../../features/auth/screens/login_screen.dart';
 import '../../features/home/screens/main_screen.dart';
 import '../../features/workout/screens/workout_screen.dart';
 import '../../features/routines/screens/exercise_selection_screen.dart';
+import '../../features/progress/screens/progress_screen.dart';
+import '../../features/settings/screens/settings_screen.dart';
+import '../../features/splash/screens/splash_screen.dart';
 import '../../core/models/routine.dart';
 import '../providers/auth_provider.dart';
 
@@ -11,20 +14,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
 
   return GoRouter(
-    initialLocation: '/login',
+    initialLocation: '/splash',
     redirect: (context, state) {
-      final isLoginPage = state.matchedLocation == '/login';
+      final location = state.matchedLocation;
+      final isSplashPage = location == '/splash';
 
-      // Mientras carga el estado de auth, no redirigir a nada
-      if (authState.isLoading) return null;
+      // Mientras carga el estado de auth, solo mostrar splash
+      if (authState.isLoading) return isSplashPage ? null : '/splash';
 
       final isLoggedIn = authState.valueOrNull != null;
 
-      if (!isLoggedIn && !isLoginPage) return '/login';
-      if (isLoggedIn && isLoginPage) return '/home';
+      if (isLoggedIn && (location == '/login' || isSplashPage)) return '/home';
+      if (!isLoggedIn && !isSplashPage && location != '/login') return '/login';
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
       GoRoute(
         path: '/login',
         builder: (context, state) => const LoginScreen(),
@@ -41,9 +49,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: '/progress',
+        builder: (context, state) => const ProgressScreen(),
+      ),
+      GoRoute(
+        path: '/settings/:section',
+        builder: (context, state) {
+          final section = state.pathParameters['section'] ?? 'notificaciones';
+          return SettingsScreen(section: section);
+        },
+      ),
+      GoRoute(
         path: '/exercise-selection',
         builder: (context, state) {
           final extra = state.extra;
+          if (extra is Routine) {
+            return ExerciseSelectionScreen(
+              routineName: extra.nombre,
+              routineType: extra.tipo,
+              existingRoutine: extra,
+            );
+          }
           String name;
           String type;
           if (extra is Map<String, dynamic>) {

@@ -29,4 +29,9 @@ class AuthService {
   Future<void> logout() async {
     await _auth.signOut();
   }
+
+  // Reset de contraseña
+  Future<void> resetPassword(String email) async {
+    await _auth.sendPasswordResetEmail(email: email);
+  }
 }
