@@ -43,8 +43,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/exercise-selection',
         builder: (context, state) {
-          final name = state.extra as String? ?? 'Rutina';
-          return ExerciseSelectionScreen(routineName: name);
+          final extra = state.extra;
+          String name;
+          String type;
+          if (extra is Map<String, dynamic>) {
+            name = extra['name'] as String? ?? 'Rutina';
+            type = extra['type'] as String? ?? 'Fuerza';
+          } else {
+            name = extra as String? ?? 'Rutina';
+            type = 'Fuerza';
+          }
+          return ExerciseSelectionScreen(routineName: name, routineType: type);
         },
       ),
     ],

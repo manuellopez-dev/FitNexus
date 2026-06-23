@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../core/models/user_profile.dart';
 import '../../../core/providers/auth_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -11,7 +11,7 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final perfilAsync = ref.watch(perfilProvider);
-    final historialAsync = ref.watch(historialProvider);
+    final historialSemanalAsync = ref.watch(historialSemanalProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0F),
@@ -32,7 +32,7 @@ class ProfileScreen extends ConsumerWidget {
                 error: (_, __) => const SizedBox.shrink(),
               ),
               const SizedBox(height: 24),
-              historialAsync.when(
+              historialSemanalAsync.when(
                 data: (historial) => _buildEstadisticasSemanales(historial),
                 loading: () => const SizedBox.shrink(),
                 error: (_, __) => const SizedBox.shrink(),
@@ -175,7 +175,7 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMetas(BuildContext context, WidgetRef ref, dynamic perfil) {
+  Widget _buildMetas(BuildContext context, WidgetRef ref, UserProfile? perfil) {
     final uid = ref.watch(authStateProvider).valueOrNull?.uid ?? '';
     final peso = perfil?.pesoObjetivo ?? 0;
     final calorias = perfil?.caloriasObjetivo ?? 500;
@@ -359,18 +359,13 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   List<bool> _diasCompletadosEstaSemana(List<Map<String, dynamic>> historial) {
-    final ahora = DateTime.now();
-    final inicioSemana = ahora.subtract(Duration(days: ahora.weekday - 1));
     final completados = List.filled(7, false);
 
     for (final w in historial) {
       final fecha = (w['fecha'] as dynamic);
       if (fecha == null) continue;
       if (fecha is Timestamp) {
-        final dia = fecha.toDate();
-        if (dia.isAfter(inicioSemana)) {
-          completados[dia.weekday - 1] = true;
-        }
+        completados[fecha.toDate().weekday - 1] = true;
       }
     }
     return completados;
@@ -442,7 +437,6 @@ class ProfileScreen extends ConsumerWidget {
           child: TextButton(
             onPressed: () async {
               await ref.read(authServiceProvider).logout();
-              if (context.mounted) context.go('/login');
             },
             child: Text(
               'Cerrar sesión',

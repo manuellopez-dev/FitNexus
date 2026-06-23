@@ -70,6 +70,7 @@ class _ExerciseSelectionScreenState
         series: s,
         reps: r,
         descansoSegundos: d,
+        gifUrl: ejercicio.gifUrl,
       ));
     });
   }
@@ -96,6 +97,7 @@ class _ExerciseSelectionScreenState
           series: s,
           reps: r,
           descansoSegundos: d,
+          gifUrl: ejercicio.gifUrl,
         );
       }
     });
@@ -114,10 +116,20 @@ class _ExerciseSelectionScreenState
       ejercicios: _selected,
     );
 
-    await ref.read(firestoreServiceProvider).crearRutina(user.uid, rutina);
-
-    if (context.mounted) {
-      context.pop();
+    try {
+      await ref.read(firestoreServiceProvider).crearRutina(user.uid, rutina);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Rutina creada')),
+        );
+        context.pop();
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al crear rutina: $e'), backgroundColor: const Color(0xFFFF4D6D)),
+        );
+      }
     }
   }
 
@@ -315,7 +327,10 @@ class _ExerciseSelectionScreenState
                     const SizedBox(height: 2),
                     Text(
                       seleccionado
-                          ? '${_selected.firstWhere((e) => e.ejercicioId == ejercicio.id).series} series · ${_selected.firstWhere((e) => e.ejercicioId == ejercicio.id).reps} reps · ${_selected.firstWhere((e) => e.ejercicioId == ejercicio.id).descansoSegundos}s'
+                          ? () {
+                              final sel = _selected.firstWhere((e) => e.ejercicioId == ejercicio.id);
+                              return '${sel.series} series · ${sel.reps} reps · ${sel.descansoSegundos}s';
+                            }()
                           : '${ejercicio.musculo} · ${ejercicio.equipo}',
                       style: GoogleFonts.zenDots(
                         fontSize: 11,

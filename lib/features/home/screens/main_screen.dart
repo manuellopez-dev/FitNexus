@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../home/screens/home_screen.dart';
 import '../../routines/screens/routines_screen.dart';
+import '../../exercises/screens/exercise_catalog_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -17,7 +18,7 @@ class _MainScreenState extends State<MainScreen> {
   final List<Widget> _screens = [
     const HomeScreen(),
     const RoutinesScreen(),
-    const _ProgresoPlaceholder(),
+    const ExerciseCatalogScreen(),
     const ProfileScreen(),
   ];
 
@@ -45,7 +46,7 @@ class _MainScreenState extends State<MainScreen> {
         children: [
           _navItem(Icons.home_rounded, 'Inicio', 0),
           _navItem(Icons.fitness_center, 'Rutinas', 1),
-          _navItem(Icons.bar_chart, 'Progreso', 2),
+          _navItem(Icons.videocam, 'Ejercicios', 2),
           _navItem(Icons.person, 'Perfil', 3),
         ],
       ),
@@ -75,26 +76,6 @@ class _MainScreenState extends State<MainScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ProgresoPlaceholder extends StatelessWidget {
-  const _ProgresoPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0D0D0F),
-      body: Center(
-        child: Text(
-          'Próximamente',
-          style: GoogleFonts.zenDots(
-            fontSize: 18,
-            color: const Color(0xFF6B6B80),
-          ),
-        ),
       ),
     );
   }

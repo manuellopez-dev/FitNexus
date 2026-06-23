@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,15 +8,15 @@ import '../../../core/models/routine.dart';
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
-  String _diaSemana() {
-    final dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-    return dias[DateTime.now().weekday - 1];
-  }
+  static const _diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+  String _diaSemana() => _diasSemana[DateTime.now().weekday - 1];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final rutinasAsync = ref.watch(rutinasProvider);
     final historialAsync = ref.watch(historialProvider);
+    final historialSemanalAsync = ref.watch(historialSemanalProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0F),
@@ -32,12 +31,16 @@ class HomeScreen extends ConsumerWidget {
               const SizedBox(height: 24),
               rutinasAsync.when(
                 data: (rutinas) => _buildRutinaDelDia(context, rutinas),
-                loading: () => _buildCardPlaceholder(),
+                loading: _buildCardPlaceholder,
                 error: (_, __) => const SizedBox.shrink(),
               ),
               const SizedBox(height: 24),
-              historialAsync.when(
-                data: (historial) => _buildEstadisticas(historial),
+              historialSemanalAsync.when(
+                data: (semanal) => historialAsync.when(
+                  data: (total) => _buildEstadisticas(semanal, total.length),
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, __) => const SizedBox.shrink(),
+                ),
                 loading: () => const SizedBox.shrink(),
                 error: (_, __) => const SizedBox.shrink(),
               ),
@@ -226,16 +229,15 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEstadisticas(List<Map<String, dynamic>> historial) {
-    final workoutsEstaSemana = _workoutsEstaSemana(historial);
-    final totalMinutos = workoutsEstaSemana.fold<int>(0, (sum, w) => sum + (w['duracionMinutos'] as int? ?? 0));
-    final totalEjercicios = workoutsEstaSemana.fold<int>(0, (sum, w) => sum + (w['ejerciciosCompletados'] as int? ?? 0));
+  Widget _buildEstadisticas(List<Map<String, dynamic>> semanal, int total) {
+    final totalMinutos = semanal.fold<int>(0, (sum, w) => sum + (w['duracionMinutos'] as int? ?? 0));
+    final totalEjercicios = semanal.fold<int>(0, (sum, w) => sum + (w['ejerciciosCompletados'] as int? ?? 0));
 
     final stats = [
       {'icon': Icons.local_fire_department, 'value': '$totalMinutos', 'label': 'Min esta semana', 'color': const Color(0xFFC8F135)},
-      {'icon': Icons.timer, 'value': '${workoutsEstaSemana.length}', 'label': 'Entrenos', 'color': const Color(0xFFE8E8F0)},
+      {'icon': Icons.timer, 'value': '${semanal.length}', 'label': 'Entrenos', 'color': const Color(0xFFE8E8F0)},
       {'icon': Icons.fitness_center, 'value': '$totalEjercicios', 'label': 'Ejercicios', 'color': const Color(0xFFC8F135)},
-      {'icon': Icons.calendar_today, 'value': '${historial.length}', 'label': 'Total workouts', 'color': const Color(0xFFE8E8F0)},
+      {'icon': Icons.calendar_today, 'value': '$total', 'label': 'Total workouts', 'color': const Color(0xFFE8E8F0)},
     ];
 
     return Column(
@@ -301,19 +303,6 @@ class HomeScreen extends ConsumerWidget {
         ),
       ],
     );
-  }
-
-  List<Map<String, dynamic>> _workoutsEstaSemana(List<Map<String, dynamic>> historial) {
-    final now = DateTime.now();
-    final inicioSemana = now.subtract(Duration(days: now.weekday - 1));
-    return historial.where((w) {
-      final fecha = (w['fecha'] as dynamic);
-      if (fecha == null) return false;
-      if (fecha is Timestamp) {
-        return fecha.toDate().isAfter(inicioSemana);
-      }
-      return false;
-    }).toList();
   }
 
   Widget _buildProximosEjercicios(List<Routine> rutinas) {

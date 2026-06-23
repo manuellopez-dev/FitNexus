@@ -3,12 +3,14 @@ class ExerciseCatalogItem {
   final String nombre;
   final String musculo;
   final String equipo; // 'Peso corporal', 'Mancuerna', 'Barra', 'Máquina', 'Polea'
+  final String gifUrl;
 
   ExerciseCatalogItem({
     required this.id,
     required this.nombre,
     required this.musculo,
     required this.equipo,
+    this.gifUrl = '',
   });
 
   factory ExerciseCatalogItem.fromMap(String id, Map<String, dynamic> map) {
@@ -17,6 +19,7 @@ class ExerciseCatalogItem {
       nombre: map['nombre'] ?? '',
       musculo: map['musculo'] ?? '',
       equipo: map['equipo'] ?? '',
+      gifUrl: map['gifUrl'] ?? '',
     );
   }
 
@@ -25,6 +28,7 @@ class ExerciseCatalogItem {
       'nombre': nombre,
       'musculo': musculo,
       'equipo': equipo,
+      'gifUrl': gifUrl,
     };
   }
 }
@@ -37,6 +41,7 @@ class RoutineExercise {
   final int series;
   final int reps;
   final int descansoSegundos;
+  final String gifUrl;
 
   RoutineExercise({
     required this.ejercicioId,
@@ -45,6 +50,7 @@ class RoutineExercise {
     required this.series,
     required this.reps,
     required this.descansoSegundos,
+    this.gifUrl = '',
   });
 
   factory RoutineExercise.fromMap(Map<String, dynamic> map) {
@@ -55,6 +61,7 @@ class RoutineExercise {
       series: map['series'] ?? 3,
       reps: map['reps'] ?? 12,
       descansoSegundos: map['descansoSegundos'] ?? 60,
+      gifUrl: map['gifUrl'] ?? '',
     );
   }
 
@@ -66,6 +73,7 @@ class RoutineExercise {
       'series': series,
       'reps': reps,
       'descansoSegundos': descansoSegundos,
+      'gifUrl': gifUrl,
     };
   }
 }

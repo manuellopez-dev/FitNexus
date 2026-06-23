@@ -310,9 +310,23 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
               if (nuevo.isEmpty) return;
               final user = ref.read(authStateProvider).valueOrNull;
               if (user != null) {
-                await ref
-                    .read(firestoreServiceProvider)
-                    .actualizarRutina(user.uid, rutina.id, {'nombre': nuevo});
+                try {
+                  await ref
+                      .read(firestoreServiceProvider)
+                      .actualizarRutina(user.uid, rutina.id, {'nombre': nuevo});
+                  if (ctx.mounted) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      const SnackBar(content: Text('Rutina actualizada')),
+                    );
+                  }
+                } catch (e) {
+                  if (ctx.mounted) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(content: Text('Error: $e'), backgroundColor: const Color(0xFFFF4D6D)),
+                    );
+                  }
+                  return;
+                }
               }
               if (ctx.mounted) Navigator.pop(ctx);
             },
@@ -363,9 +377,18 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
             onPressed: () async {
               final user = ref.read(authStateProvider).valueOrNull;
               if (user != null) {
-                await ref
-                    .read(firestoreServiceProvider)
-                    .eliminarRutina(user.uid, rutina.id);
+                try {
+                  await ref
+                      .read(firestoreServiceProvider)
+                      .eliminarRutina(user.uid, rutina.id);
+                } catch (e) {
+                  if (ctx.mounted) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(content: Text('Error: $e'), backgroundColor: const Color(0xFFFF4D6D)),
+                    );
+                  }
+                  return;
+                }
               }
               if (ctx.mounted) Navigator.pop(ctx);
             },
@@ -384,6 +407,7 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
 
   void _mostrarDialogoNuevaRutina(BuildContext context) {
     final nombreController = TextEditingController();
+    String tipoSeleccionado = 'Fuerza';
 
     showModalBottomSheet(
       context: context,
@@ -391,73 +415,116 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Nueva Rutina',
-              style: GoogleFonts.zenDots(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFFE8E8F0),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: nombreController,
-              style: GoogleFonts.zenDots(color: const Color(0xFFE8E8F0)),
-              decoration: InputDecoration(
-                hintText: 'Nombre de la rutina',
-                hintStyle: GoogleFonts.zenDots(color: const Color(0xFF6B6B80)),
-                filled: true,
-                fillColor: const Color(0xFF1E1E24),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Color(0xFF2A2A35)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Color(0xFF2A2A35)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Color(0xFFC8F135)),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Nueva Rutina',
+                style: GoogleFonts.zenDots(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFFE8E8F0),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: () {
-                  final nombre = nombreController.text.trim();
-                  if (nombre.isEmpty) return;
+              const SizedBox(height: 16),
+              TextField(
+                controller: nombreController,
+                style: GoogleFonts.zenDots(color: const Color(0xFFE8E8F0)),
+                decoration: InputDecoration(
+                  hintText: 'Nombre de la rutina',
+                  hintStyle: GoogleFonts.zenDots(color: const Color(0xFF6B6B80)),
+                  filled: true,
+                  fillColor: const Color(0xFF1E1E24),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFF2A2A35)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFF2A2A35)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFFC8F135)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Tipo de rutina',
+                style: GoogleFonts.zenDots(
+                  fontSize: 13,
+                  color: const Color(0xFF6B6B80),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: ['Fuerza', 'Cardio'].map((tipo) {
+                  final activo = tipoSeleccionado == tipo;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: GestureDetector(
+                      onTap: () => setDialogState(() => tipoSeleccionado = tipo),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: activo ? const Color(0xFFC8F135) : const Color(0xFF1E1E24),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: activo ? const Color(0xFFC8F135) : const Color(0xFF2A2A35),
+                          ),
+                        ),
+                        child: Text(
+                          tipo,
+                          style: GoogleFonts.zenDots(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: activo ? Colors.black : const Color(0xFF6B6B80),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: () {
+                    final nombre = nombreController.text.trim();
+                    if (nombre.isEmpty) return;
 
-                  Navigator.pop(context);
-                  context.push('/exercise-selection', extra: nombre);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFC8F135),
-                  foregroundColor: Colors.black,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    Navigator.pop(context);
+                    context.push('/exercise-selection', extra: {
+                      'name': nombre,
+                      'type': tipoSeleccionado,
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFC8F135),
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                ),
-                child: Text(
-                  'Crear rutina',
-                  style: GoogleFonts.zenDots(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
+                  child: Text(
+                    'Crear rutina',
+                    style: GoogleFonts.zenDots(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-          ],
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );

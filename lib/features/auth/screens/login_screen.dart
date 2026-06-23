@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuthException;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -68,27 +69,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
     }
 
-    // Seed del catálogo global de ejercicios (solo se ejecuta si está vacío)
-    await firestoreService.sembrarCatalogoEjercicios();
-
     if (mounted) context.go('/home');
-  } on Exception catch (e) {
+  } on FirebaseAuthException catch (e) {
     setState(() {
-      _errorMessage = _traducirError(e.toString());
+      _errorMessage = _traducirError(e);
     });
   } finally {
     if (mounted) setState(() => _isLoading = false);
   }
 }
 
-  String _traducirError(String error) {
-    if (error.contains('user-not-found')) return 'No existe una cuenta con ese correo';
-    if (error.contains('wrong-password')) return 'Contraseña incorrecta';
-    if (error.contains('email-already-in-use')) return 'Ese correo ya está registrado';
-    if (error.contains('weak-password')) return 'La contraseña debe tener al menos 6 caracteres';
-    if (error.contains('invalid-email')) return 'El correo no es válido';
-    if (error.contains('invalid-credential')) return 'Correo o contraseña incorrectos';
-    return 'Ocurrió un error, intenta de nuevo';
+  String _traducirError(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'user-not-found':
+        return 'No existe una cuenta con ese correo';
+      case 'wrong-password':
+        return 'Contraseña incorrecta';
+      case 'email-already-in-use':
+        return 'Ese correo ya está registrado';
+      case 'weak-password':
+        return 'La contraseña debe tener al menos 6 caracteres';
+      case 'invalid-email':
+        return 'El correo no es válido';
+      case 'invalid-credential':
+        return 'Correo o contraseña incorrectos';
+      default:
+        return 'Ocurrió un error, intenta de nuevo';
+    }
   }
 
   @override

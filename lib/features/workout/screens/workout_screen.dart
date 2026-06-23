@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/models/routine.dart';
 import '../../../core/models/exercise.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/data/exercise_gif_mapping.dart';
 
 class WorkoutScreen extends ConsumerStatefulWidget {
   final Routine? routine;
@@ -16,7 +17,8 @@ class WorkoutScreen extends ConsumerStatefulWidget {
   ConsumerState<WorkoutScreen> createState() => _WorkoutScreenState();
 }
 
-class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
+class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
+    with SingleTickerProviderStateMixin {
   late final List<RoutineExercise> _ejercicios;
   int _serieActual = 1;
   int _ejercicioActual = 0;
@@ -27,6 +29,8 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
   late final DateTime _inicio;
   int _segundosTranscurridos = 0;
   int _calorias = 0;
+  late final AnimationController _pulsoCtrl;
+  late final Animation<double> _pulsoAnim;
 
   RoutineExercise get _ejercicioActualData => _ejercicios[_ejercicioActual];
   int get _totalSeries => _ejercicioActualData.series;
@@ -46,12 +50,18 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
         _calorias = (_segundosTranscurridos / 60 * 8).round();
       });
     });
+    _pulsoCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
+    _pulsoAnim = Tween<double>(begin: 0.85, end: 1.0).animate(_pulsoCtrl);
   }
 
   @override
   void dispose() {
     _timer?.cancel();
     _cronometro?.cancel();
+    _pulsoCtrl.dispose();
     super.dispose();
   }
 
@@ -139,20 +149,31 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     );
   }
 
-  void _guardarEnHistorial() {
+  Future<void> _guardarEnHistorial() async {
     final user = ref.read(authStateProvider).valueOrNull;
     if (user == null) return;
     final duracion = DateTime.now().difference(_inicio).inMinutes;
-    ref.read(firestoreServiceProvider).guardarWorkoutCompletado(
-      uid: user.uid,
-      nombreRutina: widget.routine?.nombre ?? 'Rutina',
-      duracionMinutos: duracion < 1 ? 1 : duracion,
-      ejerciciosCompletados: _ejercicios.length,
-    );
+    try {
+      await ref.read(firestoreServiceProvider).guardarWorkoutCompletado(
+        uid: user.uid,
+        nombreRutina: widget.routine?.nombre ?? 'Rutina',
+        duracionMinutos: duracion < 1 ? 1 : duracion,
+        ejerciciosCompletados: _ejercicios.length,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al guardar historial: $e'),
+            backgroundColor: const Color(0xFFFF4D6D),
+          ),
+        );
+      }
+    }
   }
 
   void _mostrarResumen() {
-    _guardarEnHistorial();
+    unawaited(_guardarEnHistorial());
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -259,7 +280,9 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
               _buildHeader(),
               const SizedBox(height: 12),
               _buildMetricas(),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+              _buildDemoEjercicio(),
+              const SizedBox(height: 14),
               _buildNombreEjercicio(),
               const SizedBox(height: 20),
               _buildCardSeriesReps(),
@@ -368,6 +391,56 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDemoEjercicio() {
+    final rawGif = _ejercicioActualData.gifUrl;
+    final gifUrl = (rawGif.isNotEmpty && !rawGif.contains('workoutxapp'))
+        ? rawGif
+        : (exerciseGifMapping[_ejercicioActualData.nombre] ?? '');
+    return Container(
+      width: double.infinity,
+      height: 140,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E24),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF2A2A35)),
+      ),
+      child: gifUrl.isNotEmpty
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Image.network(
+                gifUrl,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: 140,
+                loadingBuilder: (context, child, loadingProgress) =>
+                    loadingProgress == null
+                        ? child
+                        : _placeholderAnimado(),
+                errorBuilder: (context, error, stackTrace) =>
+                    _placeholderAnimado(),
+              ),
+            )
+          : _placeholderAnimado(),
+    );
+  }
+
+  Widget _placeholderAnimado() {
+    return AnimatedBuilder(
+      animation: _pulsoAnim,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _pulsoAnim.value,
+          child: child,
+        );
+      },
+      child: const Icon(
+        Icons.fitness_center,
+        color: Color(0xFF2A2A35),
+        size: 56,
       ),
     );
   }
