@@ -25,6 +25,9 @@ dependencies:
   # UI
   google_fonts: ^6.2.1
 
+  # Imagen de Perfil
+  image_picker: ^1.1.2
+
+
 flutter:
   uses-material-design: true
-

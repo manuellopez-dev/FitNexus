@@ -171,6 +171,13 @@ class FirestoreService {
     await batch.commit();
   }
 
+  // ---------------- Guardar imagen en FireStore en Base64 ------------------------
+  Future<void> actualizarFotoPerfil(String uid, String base64Image) async {
+    await _db.collection('usuarios').doc(uid).update({
+      'fotoBase64': base64Image,
+    });
+  }
+
   Stream<List<Map<String, dynamic>>> obtenerHistorial(String uid) {
     return _db
         .collection('usuarios')

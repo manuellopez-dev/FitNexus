@@ -6,6 +6,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/models/user_profile.dart';
 import '../../../core/models/routine.dart';
 import '../../../core/providers/auth_provider.dart';
+import 'dart:io';
+import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -26,7 +29,7 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 20),
               _buildHeader(),
               const SizedBox(height: 32),
-              _buildAvatar(ref),
+              _buildAvatar(context, ref),
               const SizedBox(height: 24),
               perfilAsync.when(
                 data: (perfil) => _buildMetas(context, ref, perfil),
@@ -60,52 +63,150 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildAvatar(WidgetRef ref) {
-    final user = ref.watch(authStateProvider).valueOrNull;
-    final nombre = user?.displayName ?? user?.email?.split('@')[0] ?? 'Usuario';
-    final email = user?.email ?? '';
+  Widget _buildAvatar(BuildContext context, WidgetRef ref) {
+  final user = ref.watch(authStateProvider).valueOrNull;
+  final nombre = user?.displayName ?? user?.email?.split('@')[0] ?? 'Usuario';
+  final email = user?.email ?? '';
+  final perfilAsync = ref.watch(perfilProvider);
 
-    return Center(
-      child: Column(
-        children: [
-          Container(
-            width: 88,
-            height: 88,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E1E24),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: const Color(0xFFC8F135),
-                width: 2,
+  return Center(
+    child: Column(
+      children: [
+        GestureDetector(
+          onTap: () => _seleccionarFoto(context, ref),
+          child: Stack(
+            children: [
+              perfilAsync.when(
+                data: (perfil) {
+                  final fotoBase64 = perfil?.fotoBase64;
+                  return Container(
+                    width: 88,
+                    height: 88,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E1E24),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFFC8F135),
+                        width: 2,
+                      ),
+                      image: fotoBase64 != null
+                          ? DecorationImage(
+                              image: MemoryImage(base64Decode(fotoBase64)),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                    ),
+                    child: fotoBase64 == null
+                        ? const Icon(
+                            Icons.person,
+                            color: Color(0xFF6B6B80),
+                            size: 44,
+                          )
+                        : null,
+                  );
+                },
+                loading: () => Container(
+                  width: 88,
+                  height: 88,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF1E1E24),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      color: Color(0xFFC8F135),
+                      strokeWidth: 2,
+                    ),
+                  ),
+                ),
+                error: (_, __) => Container(
+                  width: 88,
+                  height: 88,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF1E1E24),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.person, color: Color(0xFF6B6B80), size: 44),
+                ),
               ),
-            ),
-            child: const Icon(
-              Icons.person,
-              color: Color(0xFF6B6B80),
-              size: 44,
-            ),
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFC8F135),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.camera_alt,
+                    color: Colors.black,
+                    size: 14,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 14),
-          Text(
-            nombre,
-            style: GoogleFonts.zenDots(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFFE8E8F0),
-            ),
+        ),
+        const SizedBox(height: 14),
+        Text(
+          nombre,
+          style: GoogleFonts.zenDots(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFFE8E8F0),
           ),
-          const SizedBox(height: 4),
-          Text(
-            email,
-            style: GoogleFonts.zenDots(
-              fontSize: 13,
-              color: const Color(0xFF6B6B80),
-            ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          email,
+          style: GoogleFonts.zenDots(
+            fontSize: 13,
+            color: const Color(0xFF6B6B80),
           ),
-        ],
+        ),
+      ],
+    ),
+  );
+}
+
+Future<void> _seleccionarFoto(BuildContext context, WidgetRef ref) async {
+  final picker = ImagePicker();
+  final imagenSeleccionada = await picker.pickImage(
+    source: ImageSource.gallery,
+    imageQuality: 60,
+    maxWidth: 300,
+    maxHeight: 300,
+  );
+
+  if (imagenSeleccionada == null) return;
+
+  final user = ref.read(authStateProvider).valueOrNull;
+  if (user == null) return;
+
+  if (context.mounted) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFFC8F135)),
       ),
     );
   }
+
+  try {
+    final bytes = await File(imagenSeleccionada.path).readAsBytes();
+    final base64Image = base64Encode(bytes);
+
+    final firestoreService = ref.read(firestoreServiceProvider);
+    await firestoreService.actualizarFotoPerfil(user.uid, base64Image);
+
+    ref.invalidate(perfilProvider);
+  } finally {
+    if (context.mounted) Navigator.pop(context);
+  }
+}
 
   void _mostrarEditarMeta(
     BuildContext context, WidgetRef ref, String uid, String campo,
