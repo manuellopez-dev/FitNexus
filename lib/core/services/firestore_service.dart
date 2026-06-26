@@ -74,44 +74,6 @@ class FirestoreService {
         .delete();
   }
 
-  // Crea las rutinas iniciales solo si el usuario no tiene ninguna
-  Future<void> sembrarRutinasIniciales(String uid) async {
-    final rutinasRef = _db.collection('usuarios').doc(uid).collection('rutinas');
-    final existentes = await rutinasRef.limit(1).get();
-    if (existentes.docs.isNotEmpty) return; // ya tiene rutinas, no sembrar
-
-    final rutinasBase = [
-      Routine(
-        id: '',
-        nombre: 'Pecho + Tríceps',
-        tipo: 'Fuerza',
-        ejercicios: [],
-      ),
-      Routine(
-        id: '',
-        nombre: 'Piernas + Glúteos',
-        tipo: 'Fuerza',
-        ejercicios: [],
-      ),
-      Routine(
-        id: '',
-        nombre: 'Espalda + Bíceps',
-        tipo: 'Fuerza',
-        ejercicios: [],
-      ),
-      Routine(
-        id: '',
-        nombre: 'HIIT Cardio',
-        tipo: 'Cardio',
-        ejercicios: [],
-      ),
-    ];
-
-    for (final rutina in rutinasBase) {
-      await rutinasRef.add(rutina.toMap());
-    }
-  }
-
   // ---------- CATÁLOGO DE EJERCICIOS ----------
 
   Future<void> sembrarCatalogoEjercicios() async {

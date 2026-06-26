@@ -70,7 +70,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       credential.user!,
       _nombreController.text.trim(),
     );
-    await firestoreService.sembrarRutinasIniciales(credential.user!.uid);
   }
     } else {
       await authService.login(

@@ -16,18 +16,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/splash',
     redirect: (context, state) {
-      final location = state.matchedLocation;
-      final isSplashPage = location == '/splash';
+  final location = state.matchedLocation;
+  final isSplashPage = location == '/splash';
+  final isLoginPage = location == '/login';
 
-      // Mientras carga el estado de auth, solo mostrar splash
-      if (authState.isLoading) return isSplashPage ? null : '/splash';
+  // Mientras carga el estado de auth, solo mostrar splash
+  if (authState.isLoading) {
+    return isSplashPage ? null : '/splash';
+  }
 
-      final isLoggedIn = authState.valueOrNull != null;
+  final isLoggedIn = authState.valueOrNull != null;
 
-      if (isLoggedIn && (location == '/login' || isSplashPage)) return '/home';
-      if (!isLoggedIn && !isSplashPage && location != '/login') return '/login';
-      return null;
-    },
+  if (isLoggedIn && (isLoginPage || isSplashPage)) return '/home';
+  if (!isLoggedIn && (isSplashPage || (!isLoginPage))) return '/login';
+  return null;
+},
     routes: [
       GoRoute(
         path: '/splash',
