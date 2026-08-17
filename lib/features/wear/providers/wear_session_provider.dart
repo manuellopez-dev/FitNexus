@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/routine.dart';
 import '../../../core/models/exercise.dart';
+import '../../../core/models/active_session.dart';
+import '../../../core/providers/auth_provider.dart';
 
 class WearSessionState {
   final RoutineExercise? currentExercise;
@@ -62,14 +64,60 @@ class WearSessionState {
 class WearSessionNotifier extends Notifier<WearSessionState> {
   Timer? _timer;
   Timer? _bpmTimer;
+  StreamSubscription? _sessionSubscription;
 
   @override
   WearSessionState build() {
     ref.onDispose(() {
       _timer?.cancel();
       _bpmTimer?.cancel();
+      _sessionSubscription?.cancel();
     });
     return WearSessionState();
+  }
+
+  void startWatchSession() {
+    final user = ref.read(authStateProvider).valueOrNull;
+    if (user == null) return;
+    
+    _sessionSubscription?.cancel();
+    _sessionSubscription = ref.read(syncServiceProvider).buscarSesionActiva(user.uid).listen((sessionId) {
+      if (sessionId == null) {
+        state = WearSessionState();
+        return;
+      }
+      
+      ref.read(syncServiceProvider).escucharSesion(sessionId).listen((session) {
+        if (session == null) return;
+        _updateFromSession(session);
+      });
+    });
+  }
+
+  void _updateFromSession(ActiveSession session) {
+    state = WearSessionState(
+      currentExercise: session.ejercicioActual != null
+          ? RoutineExercise(
+              ejercicioId: '',
+              nombre: session.ejercicioActual!.nombre,
+              musculo: session.ejercicioActual!.musculo,
+              series: session.ejercicioActual!.totalSeries,
+              reps: session.ejercicioActual!.reps,
+              descansoSegundos: session.ejercicioActual!.descansoSegundos,
+              gifUrl: session.ejercicioActual!.gifUrl,
+            )
+          : null,
+      currentExerciseIndex: session.progreso.ejercicioIndex,
+      totalExercises: session.progreso.totalEjercicios,
+      currentSet: session.ejercicioActual?.serieActual ?? 1,
+      totalSets: session.ejercicioActual?.totalSeries ?? 3,
+      elapsedSeconds: session.progreso.segundosTranscurridos,
+      restSeconds: session.descanso.segundosRestantes,
+      isResting: session.descanso.activo,
+      isComplete: session.estado == 'finalizada',
+      heartRateBpm: session.bpm,
+      calories: session.progreso.calorias,
+    );
   }
 
   void startWorkout(Routine routine) {
@@ -108,6 +156,7 @@ class WearSessionNotifier extends Notifier<WearSessionState> {
         restSeconds: state.restSeconds,
       );
       _iniciarCuentaRegresiva();
+      _sincronizarEstado();
     }
   }
 
@@ -121,7 +170,19 @@ class WearSessionNotifier extends Notifier<WearSessionState> {
         restSeconds: 90,
       );
       _timer?.cancel();
+      _sincronizarEstado();
     }
+  }
+
+  void _sincronizarEstado() {
+    final sessionId = ref.read(activeSessionIdProvider);
+    if (sessionId == null) return;
+    ref.read(syncServiceProvider).actualizarSesion(sessionId, {
+      'descanso': {
+        'activo': state.isResting,
+        'segundosRestantes': state.restSeconds,
+      },
+    });
   }
 
   void _iniciarCuentaRegresiva() {
@@ -142,6 +203,10 @@ class WearSessionNotifier extends Notifier<WearSessionState> {
     _timer?.cancel();
     _bpmTimer?.cancel();
     state = state.copyWith(isComplete: true);
+    final sessionId = ref.read(activeSessionIdProvider);
+    if (sessionId != null) {
+      ref.read(syncServiceProvider).finalizarSesion(sessionId);
+    }
   }
 }
 

@@ -2,9 +2,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import '../services/sync_service.dart';
 import '../models/user_profile.dart';
 import '../models/routine.dart';
 import '../models/exercise.dart';
+import '../models/active_session.dart';
 import '../data/exercise_gif_mapping.dart';
 
 final authServiceProvider = Provider<AuthService>((ref) {
@@ -63,4 +65,17 @@ final historialSemanalProvider = StreamProvider<List<Map<String, dynamic>>>((ref
   final user = ref.watch(authStateProvider).valueOrNull;
   if (user == null) return Stream.value([]);
   return ref.watch(firestoreServiceProvider).obtenerHistorialSemanal(user.uid);
+});
+
+final syncServiceProvider = Provider<SyncService>((ref) {
+  return SyncService();
+});
+
+final activeSessionIdProvider = StateProvider<String?>((ref) => null);
+
+final activeSessionProvider = StreamProvider<ActiveSession?>((ref) {
+  final syncService = ref.watch(syncServiceProvider);
+  final sessionId = ref.watch(activeSessionIdProvider);
+  if (sessionId == null) return Stream.value(null);
+  return syncService.escucharSesion(sessionId);
 });

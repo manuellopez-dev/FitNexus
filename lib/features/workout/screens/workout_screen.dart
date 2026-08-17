@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/models/routine.dart';
 import '../../../core/models/exercise.dart';
+import '../../../core/models/active_session.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/widgets/snackbar_helper.dart';
 import '../../../core/data/exercise_gif_mapping.dart';
@@ -37,6 +38,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   late final DateTime _inicio;
   int _segundosTranscurridos = 0;
   int _calorias = 0;
+  String? _sessionId;
   late final AnimationController _pulsoCtrl;
   late final Animation<double> _pulsoAnim;
 
@@ -74,6 +76,40 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
       duration: const Duration(milliseconds: 1000),
     )..repeat(reverse: true);
     _pulsoAnim = Tween<double>(begin: 0.85, end: 1.0).animate(_pulsoCtrl);
+    _iniciarSesionRemota();
+  }
+
+  Future<void> _iniciarSesionRemota() async {
+    final user = ref.read(authStateProvider).valueOrNull;
+    if (user == null || _ejercicios.isEmpty) return;
+    final first = _ejercicios.first;
+    _sessionId = await ref.read(syncServiceProvider).crearSesion(
+      ActiveSession(
+        id: '',
+        hostUid: user.uid,
+        rutinaNombre: widget.routine?.nombre ?? 'Rutina',
+        estado: 'activa',
+        ejercicioActual: ExerciseState(
+          nombre: first.nombre,
+          musculo: first.musculo,
+          gifUrl: first.gifUrl,
+          serieActual: 1,
+          totalSeries: first.series,
+          reps: first.reps,
+          descansoSegundos: first.descansoSegundos,
+        ),
+        progreso: ProgressState(
+          ejercicioIndex: 0,
+          totalEjercicios: _ejercicios.length,
+          segundosTranscurridos: 0,
+          calorias: 0,
+        ),
+        descanso: RestState(activo: false, segundosRestantes: 0),
+        bpm: 72,
+        timestamp: DateTime.now().millisecondsSinceEpoch,
+      ),
+    );
+    ref.read(activeSessionIdProvider.notifier).state = _sessionId;
   }
 
   @override
@@ -83,6 +119,9 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     _pulsoCtrl.dispose();
     _weightCtrl.dispose();
     _repsCtrl.dispose();
+    if (_sessionId != null) {
+      ref.read(syncServiceProvider).eliminarSesion(_sessionId!);
+    }
     super.dispose();
   }
 
@@ -97,14 +136,43 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
       _descansando = true;
       _segundosDescanso = _ejercicioActualData.descansoSegundos;
     });
+    _sincronizarEstado();
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_segundosDescanso <= 0) {
         timer.cancel();
-        if (mounted) setState(() => _descansando = false);
+        if (mounted) {
+          setState(() => _descansando = false);
+          _sincronizarEstado();
+        }
       } else {
         if (mounted) setState(() => _segundosDescanso--);
       }
+    });
+  }
+
+  void _sincronizarEstado() {
+    if (_sessionId == null) return;
+    ref.read(syncServiceProvider).actualizarSesion(_sessionId!, {
+      'ejercicioActual': ExerciseState(
+        nombre: _ejercicioActualData.nombre,
+        musculo: _ejercicioActualData.musculo,
+        gifUrl: _ejercicioActualData.gifUrl,
+        serieActual: _serieActual,
+        totalSeries: _totalSeries,
+        reps: _ejercicioActualData.reps,
+        descansoSegundos: _ejercicioActualData.descansoSegundos,
+      ).toMap(),
+      'progreso': ProgressState(
+        ejercicioIndex: _ejercicioActual,
+        totalEjercicios: _ejercicios.length,
+        segundosTranscurridos: _segundosTranscurridos,
+        calorias: _calorias,
+      ).toMap(),
+      'descanso': RestState(
+        activo: _descansando,
+        segundosRestantes: _segundosDescanso,
+      ).toMap(),
     });
   }
 
@@ -121,6 +189,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     if (_serieActual < _totalSeries) {
       _iniciarDescanso();
       setState(() => _serieActual++);
+      _sincronizarEstado();
     } else {
       if (_ejercicioActual < _ejercicios.length - 1) {
         _timer?.cancel();
@@ -129,6 +198,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
           _serieActual = 1;
           _descansando = false;
         });
+        _sincronizarEstado();
       } else {
         _timer?.cancel();
         _mostrarResumen();
@@ -203,6 +273,9 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   }
 
   void _mostrarResumen() {
+    if (_sessionId != null) {
+      ref.read(syncServiceProvider).finalizarSesion(_sessionId!);
+    }
     unawaited(_guardarEnHistorial());
     showDialog(
       context: context,
