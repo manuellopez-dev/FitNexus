@@ -117,7 +117,7 @@ class SettingsScreen extends StatelessWidget {
           Switch(
             value: valor,
             onChanged: (_) {},
-            activeColor: const Color(0xFFC8F135),
+            activeThumbColor: const Color(0xFFC8F135),
           ),
         ],
       ),

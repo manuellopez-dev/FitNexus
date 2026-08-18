@@ -6,7 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/models/user_profile.dart';
 import '../../../core/models/routine.dart';
 import '../../../core/providers/auth_provider.dart';
-import 'dart:io';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 
@@ -196,7 +195,7 @@ Future<void> _seleccionarFoto(BuildContext context, WidgetRef ref) async {
   }
 
   try {
-    final bytes = await File(imagenSeleccionada.path).readAsBytes();
+    final bytes = await imagenSeleccionada.readAsBytes();
     final base64Image = base64Encode(bytes);
 
     final firestoreService = ref.read(firestoreServiceProvider);
@@ -338,8 +337,6 @@ Future<void> _seleccionarFoto(BuildContext context, WidgetRef ref) async {
   }
 
   Widget _buildDiasEntrenamiento(BuildContext context, WidgetRef ref, String uid, List<int> diasEntreno, int activos) {
-    final labels = diasEntreno.map((d) => _nombresDias[d - 1]).join(', ');
-
     return GestureDetector(
       onTap: () => _mostrarSelectorDias(context, ref, uid, diasEntreno.toList()),
       child: Container(

@@ -443,10 +443,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFF4D6D).withOpacity(0.1),
+                    color: const Color(0xFFFF4D6D).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: const Color(0xFFFF4D6D).withOpacity(0.3),
+                      color: const Color(0xFFFF4D6D).withValues(alpha: 0.3),
                     ),
                   ),
                   child: Text(
