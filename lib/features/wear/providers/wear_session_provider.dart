@@ -15,6 +15,7 @@ class WearSessionState {
   final int restSeconds;
   final bool isResting;
   final bool isComplete;
+  final bool isWaiting;
   final int heartRateBpm;
   final int calories;
 
@@ -28,6 +29,7 @@ class WearSessionState {
     this.restSeconds = 0,
     this.isResting = false,
     this.isComplete = false,
+    this.isWaiting = false,
     this.heartRateBpm = 72,
     this.calories = 0,
   });
@@ -42,6 +44,7 @@ class WearSessionState {
     int? restSeconds,
     bool? isResting,
     bool? isComplete,
+    bool? isWaiting,
     int? heartRateBpm,
     int? calories,
   }) {
@@ -55,6 +58,7 @@ class WearSessionState {
       restSeconds: restSeconds ?? this.restSeconds,
       isResting: isResting ?? this.isResting,
       isComplete: isComplete ?? this.isComplete,
+      isWaiting: isWaiting ?? this.isWaiting,
       heartRateBpm: heartRateBpm ?? this.heartRateBpm,
       calories: calories ?? this.calories,
     );
@@ -62,32 +66,42 @@ class WearSessionState {
 }
 
 class WearSessionNotifier extends Notifier<WearSessionState> {
-  Timer? _timer;
-  Timer? _bpmTimer;
+  StreamSubscription? _idSubscription;
   StreamSubscription? _sessionSubscription;
+  String? _sessionId;
 
   @override
   WearSessionState build() {
     ref.onDispose(() {
-      _timer?.cancel();
-      _bpmTimer?.cancel();
+      _idSubscription?.cancel();
       _sessionSubscription?.cancel();
     });
     return WearSessionState();
   }
 
+  /// Sigue la sesión activa del usuario (creada por el móvil o la TV)
   void startWatchSession() {
     final user = ref.read(authStateProvider).valueOrNull;
     if (user == null) return;
-    
-    _sessionSubscription?.cancel();
-    _sessionSubscription = ref.read(syncServiceProvider).buscarSesionActiva(user.uid).listen((sessionId) {
+
+    _idSubscription?.cancel();
+    _idSubscription = ref
+        .read(syncServiceProvider)
+        .buscarSesionActiva(user.uid)
+        .listen((sessionId) {
+      if (sessionId == _sessionId) return;
+      _sessionSubscription?.cancel();
+      _sessionId = sessionId;
+
       if (sessionId == null) {
         state = WearSessionState();
         return;
       }
-      
-      ref.read(syncServiceProvider).escucharSesion(sessionId).listen((session) {
+
+      _sessionSubscription = ref
+          .read(syncServiceProvider)
+          .escucharSesion(sessionId)
+          .listen((session) {
         if (session == null) return;
         _updateFromSession(session);
       });
@@ -120,96 +134,63 @@ class WearSessionNotifier extends Notifier<WearSessionState> {
     );
   }
 
-  void startWorkout(Routine routine) {
-    if (routine.ejercicios.isEmpty) return;
-    state = WearSessionState(
-      currentExercise: routine.ejercicios.first,
-      totalExercises: routine.ejercicios.length,
-      totalSets: routine.ejercicios.first.series,
-      restSeconds: routine.ejercicios.first.descansoSegundos,
-    );
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      state = state.copyWith(
-        elapsedSeconds: state.elapsedSeconds + 1,
-        calories: ((state.elapsedSeconds + 1) / 60 * 8).round(),
-      );
-    });
-    _simularBpm();
+  /// Pide al móvil que abra esta rutina. El watch queda en espera
+  /// hasta que el móvil active la sesión.
+  Future<void> solicitarSesion(Routine routine) async {
+    final user = ref.read(authStateProvider).valueOrNull;
+    if (user == null || routine.ejercicios.isEmpty) return;
+
+    final primera = routine.ejercicios.first;
+    state = WearSessionState(isWaiting: true);
+
+    await ref.read(syncServiceProvider).limpiarSesionesAnteriores(user.uid);
+    await ref.read(syncServiceProvider).crearSesion(
+          ActiveSession(
+            id: '',
+            hostUid: user.uid,
+            rutinaId: routine.id,
+            rutinaNombre: routine.nombre,
+            estado: 'solicitada',
+            ejercicioActual: ExerciseState(
+              nombre: primera.nombre,
+              musculo: primera.musculo,
+              gifUrl: primera.gifUrl,
+              serieActual: 1,
+              totalSeries: primera.series,
+              reps: primera.reps,
+              descansoSegundos: primera.descansoSegundos,
+            ),
+            progreso: ProgressState(
+              ejercicioIndex: 0,
+              totalEjercicios: routine.ejercicios.length,
+              segundosTranscurridos: 0,
+              calorias: 0,
+            ),
+            descanso: RestState(activo: false, segundosRestantes: 0),
+            bpm: 72,
+            timestamp: DateTime.now().millisecondsSinceEpoch,
+          ),
+        );
   }
 
-  void _simularBpm() {
-    _bpmTimer?.cancel();
-    _bpmTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      final variacion = (DateTime.now().millisecondsSinceEpoch % 30 - 15).toInt();
-      state = state.copyWith(
-        heartRateBpm: (72 + variacion).clamp(60, 130),
-      );
-    });
-  }
+  // -------- Controles: siempre enviados como comando al móvil --------
 
-  void nextSet() {
-    if (state.currentSet < state.totalSets) {
-      state = state.copyWith(
-        currentSet: state.currentSet + 1,
-        isResting: true,
-        restSeconds: state.restSeconds,
-      );
-      _iniciarCuentaRegresiva();
-      _sincronizarEstado();
-    }
-  }
+  void nextSet() => _enviarComando('siguienteSerie');
 
-  void nextExercise() {
-    if (state.currentExerciseIndex < state.totalExercises - 1) {
-      final nextIndex = state.currentExerciseIndex + 1;
-      state = state.copyWith(
-        currentExerciseIndex: nextIndex,
-        currentSet: 1,
-        isResting: false,
-        restSeconds: 90,
-      );
-      _timer?.cancel();
-      _sincronizarEstado();
-    }
-  }
+  void nextExercise() => _enviarComando('siguienteEjercicio');
 
-  void _sincronizarEstado() {
-    final sessionId = ref.read(activeSessionIdProvider);
+  void finishWorkout() => _enviarComando('finalizar');
+
+  void reanudar() => _enviarComando('reanudar');
+
+  void _enviarComando(String accion) {
+    final sessionId = _sessionId;
     if (sessionId == null) return;
-    ref.read(syncServiceProvider).actualizarSesion(sessionId, {
-      'descanso': {
-        'activo': state.isResting,
-        'segundosRestantes': state.restSeconds,
-      },
-    });
-  }
-
-  void _iniciarCuentaRegresiva() {
-    _timer?.cancel();
-    var segundos = state.restSeconds;
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (segundos <= 0) {
-        timer.cancel();
-        state = state.copyWith(isResting: false);
-      } else {
-        segundos--;
-        state = state.copyWith(restSeconds: segundos);
-      }
-    });
-  }
-
-  void finishWorkout() {
-    _timer?.cancel();
-    _bpmTimer?.cancel();
-    state = state.copyWith(isComplete: true);
-    final sessionId = ref.read(activeSessionIdProvider);
-    if (sessionId != null) {
-      ref.read(syncServiceProvider).finalizarSesion(sessionId);
-    }
+    ref.read(syncServiceProvider).enviarComando(sessionId, accion, 'watch');
   }
 }
 
-final wearSessionProvider = NotifierProvider<WearSessionNotifier, WearSessionState>(
+final wearSessionProvider =
+    NotifierProvider<WearSessionNotifier, WearSessionState>(
   WearSessionNotifier.new,
 );

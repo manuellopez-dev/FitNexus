@@ -1,12 +1,15 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'core/providers/auth_provider.dart';
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
+import 'features/smart_tv/screens/login_tv_screen.dart';
 import 'features/smart_tv/screens/main_tv_screen.dart';
 import 'features/smart_tv/screens/active_session_tv_screen.dart';
 import 'features/smart_tv/screens/stats_tv_screen.dart';
 import 'features/smart_tv/screens/rest_tv_screen.dart';
+import 'features/wear/providers/wear_session_provider.dart';
 
 @pragma('vm:entry-point')
 void main() async {
@@ -21,16 +24,22 @@ void main() async {
   );
 }
 
-class FitNexusTvApp extends StatelessWidget {
+class FitNexusTvApp extends ConsumerWidget {
   const FitNexusTvApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authStateProvider);
+
     return MaterialApp(
       title: 'FitNexus TV',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      initialRoute: '/tv',
+      home: authState.isLoading
+          ? const _SplashTv()
+          : authState.valueOrNull == null
+              ? const LoginTvScreen()
+              : const _TvHome(),
       routes: {
         '/tv': (context) => const MainTvScreen(),
         '/tv/session': (context) => const ActiveSessionTvScreen(),
@@ -38,5 +47,45 @@ class FitNexusTvApp extends StatelessWidget {
         '/tv/rest': (context) => const RestTvScreen(),
       },
     );
+  }
+}
+
+class _SplashTv extends StatelessWidget {
+  const _SplashTv();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: Color(0xFF0D0D0F),
+      body: Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFFC8F135),
+          strokeWidth: 3,
+        ),
+      ),
+    );
+  }
+}
+
+class _TvHome extends ConsumerStatefulWidget {
+  const _TvHome();
+
+  @override
+  ConsumerState<_TvHome> createState() => _TvHomeState();
+}
+
+class _TvHomeState extends ConsumerState<_TvHome> {
+  @override
+  void initState() {
+    super.initState();
+    // Escucha la sesión creada desde el móvil o desde el reloj
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(wearSessionProvider.notifier).startWatchSession();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const MainTvScreen();
   }
 }

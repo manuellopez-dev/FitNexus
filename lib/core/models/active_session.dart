@@ -1,6 +1,7 @@
 class ActiveSession {
   final String id;
   final String hostUid;
+  final String rutinaId;
   final String rutinaNombre;
   final String estado;
   final ExerciseState? ejercicioActual;
@@ -8,10 +9,12 @@ class ActiveSession {
   final RestState descanso;
   final int bpm;
   final int timestamp;
+  final SessionCommand? comando;
 
   ActiveSession({
     required this.id,
     required this.hostUid,
+    this.rutinaId = '',
     required this.rutinaNombre,
     required this.estado,
     this.ejercicioActual,
@@ -19,11 +22,13 @@ class ActiveSession {
     required this.descanso,
     required this.bpm,
     required this.timestamp,
+    this.comando,
   });
 
   Map<String, dynamic> toMap() {
     return {
       'hostUid': hostUid,
+      'rutinaId': rutinaId,
       'rutinaNombre': rutinaNombre,
       'estado': estado,
       'ejercicioActual': ejercicioActual?.toMap(),
@@ -31,6 +36,7 @@ class ActiveSession {
       'descanso': descanso.toMap(),
       'bpm': bpm,
       'timestamp': timestamp,
+      'comando': comando?.toMap(),
     };
   }
 
@@ -38,6 +44,7 @@ class ActiveSession {
     return ActiveSession(
       id: id,
       hostUid: map['hostUid'] ?? '',
+      rutinaId: map['rutinaId'] ?? '',
       rutinaNombre: map['rutinaNombre'] ?? '',
       estado: map['estado'] ?? 'iniciada',
       ejercicioActual: map['ejercicioActual'] != null
@@ -46,6 +53,37 @@ class ActiveSession {
       progreso: ProgressState.fromMap(Map<String, dynamic>.from(map['progreso'] ?? {})),
       descanso: RestState.fromMap(Map<String, dynamic>.from(map['descanso'] ?? {})),
       bpm: map['bpm'] ?? 72,
+      timestamp: map['timestamp'] ?? 0,
+      comando: map['comando'] != null
+          ? SessionCommand.fromMap(Map<String, dynamic>.from(map['comando']))
+          : null,
+    );
+  }
+}
+
+class SessionCommand {
+  final String accion;
+  final String origen;
+  final int timestamp;
+
+  SessionCommand({
+    required this.accion,
+    required this.origen,
+    required this.timestamp,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'accion': accion,
+      'origen': origen,
+      'timestamp': timestamp,
+    };
+  }
+
+  factory SessionCommand.fromMap(Map<String, dynamic> map) {
+    return SessionCommand(
+      accion: map['accion'] ?? '',
+      origen: map['origen'] ?? '',
       timestamp: map['timestamp'] ?? 0,
     );
   }

@@ -19,8 +19,9 @@ class _SetLog {
 
 class WorkoutScreen extends ConsumerStatefulWidget {
   final Routine? routine;
+  final String? existingSessionId;
 
-  const WorkoutScreen({super.key, this.routine});
+  const WorkoutScreen({super.key, this.routine, this.existingSessionId});
 
   @override
   ConsumerState<WorkoutScreen> createState() => _WorkoutScreenState();
@@ -39,6 +40,8 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   int _segundosTranscurridos = 0;
   int _calorias = 0;
   String? _sessionId;
+  StreamSubscription<ActiveSession?>? _sessionSub;
+  int _ultimoComandoAtendido = 0;
   late final AnimationController _pulsoCtrl;
   late final Animation<double> _pulsoAnim;
 
@@ -70,6 +73,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
         _segundosTranscurridos++;
         _calorias = (_segundosTranscurridos / 60 * 8).round();
       });
+      _sincronizarProgreso();
     });
     _pulsoCtrl = AnimationController(
       vsync: this,
@@ -82,34 +86,99 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   Future<void> _iniciarSesionRemota() async {
     final user = ref.read(authStateProvider).valueOrNull;
     if (user == null || _ejercicios.isEmpty) return;
-    final first = _ejercicios.first;
-    _sessionId = await ref.read(syncServiceProvider).crearSesion(
-      ActiveSession(
-        id: '',
-        hostUid: user.uid,
-        rutinaNombre: widget.routine?.nombre ?? 'Rutina',
-        estado: 'activa',
-        ejercicioActual: ExerciseState(
-          nombre: first.nombre,
-          musculo: first.musculo,
-          gifUrl: first.gifUrl,
-          serieActual: 1,
-          totalSeries: first.series,
-          reps: first.reps,
-          descansoSegundos: first.descansoSegundos,
-        ),
-        progreso: ProgressState(
-          ejercicioIndex: 0,
-          totalEjercicios: _ejercicios.length,
-          segundosTranscurridos: 0,
-          calorias: 0,
-        ),
-        descanso: RestState(activo: false, segundosRestantes: 0),
-        bpm: 72,
-        timestamp: DateTime.now().millisecondsSinceEpoch,
+
+    final sync = ref.read(syncServiceProvider);
+    await sync.limpiarSesionesAnteriores(user.uid);
+
+    final primera = _ejercicios.first;
+    final datosSesion = ActiveSession(
+      id: '',
+      hostUid: user.uid,
+      rutinaId: widget.routine?.id ?? '',
+      rutinaNombre: widget.routine?.nombre ?? 'Rutina',
+      estado: 'activa',
+      ejercicioActual: ExerciseState(
+        nombre: primera.nombre,
+        musculo: primera.musculo,
+        gifUrl: primera.gifUrl,
+        serieActual: 1,
+        totalSeries: primera.series,
+        reps: primera.reps,
+        descansoSegundos: primera.descansoSegundos,
       ),
+      progreso: ProgressState(
+        ejercicioIndex: 0,
+        totalEjercicios: _ejercicios.length,
+        segundosTranscurridos: 0,
+        calorias: 0,
+      ),
+      descanso: RestState(activo: false, segundosRestantes: 0),
+      bpm: 72,
+      timestamp: DateTime.now().millisecondsSinceEpoch,
     );
+
+    if (widget.existingSessionId != null) {
+      // Sesión solicitada por el watch / TV: la adoptamos y la activamos
+      _sessionId = widget.existingSessionId;
+      await sync.actualizarSesion(_sessionId!, datosSesion.toMap());
+      await sync.activarSesion(_sessionId!);
+    } else {
+      _sessionId = await sync.crearSesion(datosSesion);
+    }
+
     ref.read(activeSessionIdProvider.notifier).state = _sessionId;
+    _escucharComandos();
+  }
+
+  void _escucharComandos() {
+    final sessionId = _sessionId;
+    if (sessionId == null) return;
+    _sessionSub =
+        ref.read(syncServiceProvider).escucharSesion(sessionId).listen((session) {
+      if (session == null || !mounted) return;
+      final comando = session.comando;
+      if (comando == null || comando.timestamp <= _ultimoComandoAtendido) return;
+      _ultimoComandoAtendido = comando.timestamp;
+      _procesarComando(comando.accion);
+      ref.read(syncServiceProvider).limpiarComando(sessionId);
+    });
+  }
+
+  void _procesarComando(String accion) {
+    switch (accion) {
+      case 'siguienteSerie':
+        _timer?.cancel();
+        _descansando = false;
+        _serieCompletada();
+        break;
+      case 'siguienteEjercicio':
+        _avanzarEjercicio();
+        break;
+      case 'finalizar':
+        _mostrarResumen();
+        break;
+      case 'reanudar':
+        if (_descansando) {
+          _timer?.cancel();
+          setState(() => _descansando = false);
+          _sincronizarEstado();
+        }
+        break;
+    }
+  }
+
+  void _avanzarEjercicio() {
+    if (_ejercicioActual >= _ejercicios.length - 1) {
+      _mostrarResumen();
+      return;
+    }
+    _timer?.cancel();
+    setState(() {
+      _ejercicioActual++;
+      _serieActual = 1;
+      _descansando = false;
+    });
+    _sincronizarEstado();
   }
 
   @override
@@ -119,8 +188,10 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     _pulsoCtrl.dispose();
     _weightCtrl.dispose();
     _repsCtrl.dispose();
+    _sessionSub?.cancel();
     if (_sessionId != null) {
-      ref.read(syncServiceProvider).eliminarSesion(_sessionId!);
+      // No borramos: watch y TV necesitan ver el resumen de la sesión
+      ref.read(syncServiceProvider).finalizarSesion(_sessionId!);
     }
     super.dispose();
   }
@@ -147,7 +218,30 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
         }
       } else {
         if (mounted) setState(() => _segundosDescanso--);
+        _sincronizarDescanso();
       }
+    });
+  }
+
+  void _sincronizarProgreso() {
+    if (_sessionId == null) return;
+    ref.read(syncServiceProvider).actualizarSesion(_sessionId!, {
+      'progreso': ProgressState(
+        ejercicioIndex: _ejercicioActual,
+        totalEjercicios: _ejercicios.length,
+        segundosTranscurridos: _segundosTranscurridos,
+        calorias: _calorias,
+      ).toMap(),
+    });
+  }
+
+  void _sincronizarDescanso() {
+    if (_sessionId == null) return;
+    ref.read(syncServiceProvider).actualizarSesion(_sessionId!, {
+      'descanso': RestState(
+        activo: _descansando,
+        segundosRestantes: _segundosDescanso,
+      ).toMap(),
     });
   }
 

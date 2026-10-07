@@ -55,6 +55,18 @@ class FirestoreService {
         .add(rutina.toMap());
   }
 
+  Future<Routine?> obtenerRutina(String uid, String rutinaId) async {
+    if (rutinaId.isEmpty) return null;
+    final doc = await _db
+        .collection('usuarios')
+        .doc(uid)
+        .collection('rutinas')
+        .doc(rutinaId)
+        .get();
+    if (!doc.exists) return null;
+    return Routine.fromMap(doc.id, doc.data() ?? {});
+  }
+
   Future<void> actualizarRutina(
       String uid, String rutinaId, Map<String, dynamic> datos) async {
     await _db
@@ -77,28 +89,82 @@ class FirestoreService {
   // ---------- CATÁLOGO DE EJERCICIOS ----------
 
   Future<void> sembrarCatalogoEjercicios() async {
-    final ref = _db.collection('catalogo_ejercicios');
-    final existentes = await ref.get();
+  final ref = _db.collection('catalogo_ejercicios');
 
-    if (existentes.docs.isEmpty) {
-      for (final item in exerciseCatalogSeed) {
-        final gifUrl = exerciseGifMapping[item['nombre']] ?? '';
-        await ref.add({...item, 'gifUrl': gifUrl});
-      }
-      return;
+  // Obtener ejercicios que ya existen en Firestore
+  final existentes = await ref.get();
+
+  // Mapa: nombre del ejercicio -> documento de Firestore
+  final documentosExistentes = <String, QueryDocumentSnapshot<Map<String, dynamic>>>{};
+
+  for (final doc in existentes.docs) {
+    final nombre = doc.data()['nombre']?.toString();
+
+    if (nombre != null && nombre.isNotEmpty) {
+      documentosExistentes[nombre] = doc;
+    }
+  }
+
+  final batch = _db.batch();
+
+  int agregados = 0;
+  int actualizados = 0;
+
+  for (final item in exerciseCatalogSeed) {
+    final nombre = item['nombre']?.toString() ?? '';
+
+    if (nombre.isEmpty) {
+      continue;
     }
 
-    final batch = _db.batch();
-    for (final doc in existentes.docs) {
-      final data = doc.data();
-      final currentGif = data['gifUrl'] as String? ?? '';
-      final mappedGif = exerciseGifMapping[data['nombre']] ?? '';
-      if (mappedGif.isNotEmpty && currentGif != mappedGif) {
-        batch.update(doc.reference, {'gifUrl': mappedGif});
+    final gifUrl = exerciseGifMapping[nombre] ?? '';
+
+    // ¿Ya existe este ejercicio?
+    final documentoExistente = documentosExistentes[nombre];
+
+    if (documentoExistente != null) {
+      // Actualizar GIF si existe uno diferente
+      final gifActual =
+          documentoExistente.data()['gifUrl']?.toString() ?? '';
+
+      if (gifUrl.isNotEmpty && gifActual != gifUrl) {
+        batch.update(
+          documentoExistente.reference,
+          {
+            'gifUrl': gifUrl,
+          },
+        );
+
+        actualizados++;
       }
+    } else {
+      // Crear ejercicio faltante
+      final nuevoDocumento = ref.doc();
+
+      batch.set(
+        nuevoDocumento,
+        {
+          ...item,
+          'gifUrl': gifUrl,
+        },
+      );
+
+      agregados++;
     }
+  }
+
+  // Ejecutar todas las operaciones
+  if (agregados > 0 || actualizados > 0) {
     await batch.commit();
   }
+
+  print('========================================');
+  print('CATÁLOGO DE EJERCICIOS');
+  print('Ejercicios existentes: ${existentes.docs.length}');
+  print('Ejercicios agregados: $agregados');
+  print('GIFs actualizados: $actualizados');
+  print('========================================');
+}
 
   Future<List<ExerciseCatalogItem>> obtenerCatalogoEjercicios() async {
     final snapshot = await _db.collection('catalogo_ejercicios').get();

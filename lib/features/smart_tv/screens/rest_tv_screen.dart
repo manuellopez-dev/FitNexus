@@ -27,7 +27,7 @@ class RestTvScreen extends ConsumerWidget {
     }
 
     final restSeconds = session.restSeconds;
-    final totalRest = 90;
+    final totalRest = session.currentExercise?.descansoSegundos ?? 90;
     final progress = totalRest > 0 ? restSeconds / totalRest : 0.0;
 
     return Scaffold(

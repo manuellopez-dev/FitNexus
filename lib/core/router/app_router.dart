@@ -47,8 +47,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/workout',
         builder: (context, state) {
-          final routine = state.extra as Routine?;
-          return WorkoutScreen(routine: routine);
+          final extra = state.extra;
+          if (extra is Map<String, dynamic>) {
+            return WorkoutScreen(
+              routine: extra['rutina'] as Routine?,
+              existingSessionId: extra['sessionId'] as String?,
+            );
+          }
+          return WorkoutScreen(routine: extra as Routine?);
         },
       ),
       GoRoute(

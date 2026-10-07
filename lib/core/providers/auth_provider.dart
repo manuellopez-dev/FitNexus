@@ -71,3 +71,10 @@ final syncServiceProvider = Provider<SyncService>((ref) {
 });
 
 final activeSessionIdProvider = StateProvider<String?>((ref) => null);
+
+// Sesión creada por el watch / TV esperando que el móvil la adopte
+final sessionRequestProvider = StreamProvider<String?>((ref) {
+  final user = ref.watch(authStateProvider).valueOrNull;
+  if (user == null) return Stream.value(null);
+  return ref.watch(syncServiceProvider).buscarSesionSolicitada(user.uid);
+});

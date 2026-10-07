@@ -57,7 +57,7 @@ class _WatchFaceScreenState extends ConsumerState<WatchFaceScreen> {
               _buildCircleIndicator(session),
               _buildBars(session),
               _buildIndicators(session),
-              _buildButton(rutinasAsync),
+              _buildButton(rutinasAsync, session),
             ],
           ),
         ),
@@ -259,7 +259,32 @@ class _WatchFaceScreenState extends ConsumerState<WatchFaceScreen> {
     );
   }
 
-  Widget _buildButton(AsyncValue<List<dynamic>> rutinasAsync) {
+  Widget _buildButton(
+      AsyncValue<List<dynamic>> rutinasAsync, WearSessionState session) {
+    if (session.isWaiting && session.currentExercise == null) {
+      return Column(
+        children: [
+          const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+              color: Color(0xFFC8F135),
+              strokeWidth: 2,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Esperando el móvil...',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.zenDots(
+              fontSize: 9,
+              color: const Color(0xFFC8F135),
+            ),
+          ),
+        ],
+      );
+    }
+
     return rutinasAsync.when(
       data: (rutinas) {
         if (rutinas.isEmpty) {
@@ -275,7 +300,8 @@ class _WatchFaceScreenState extends ConsumerState<WatchFaceScreen> {
           width: double.infinity,
           height: 32,
           child: ElevatedButton(
-            onPressed: () => ref.read(wearSessionProvider.notifier).startWorkout(rutinas.first),
+            onPressed: () =>
+                ref.read(wearSessionProvider.notifier).solicitarSesion(rutinas.first),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFC8F135),
               foregroundColor: Colors.black,

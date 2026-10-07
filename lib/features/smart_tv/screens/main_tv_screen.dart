@@ -1,7 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../wear/providers/wear_session_provider.dart';
 
 class MainTvScreen extends ConsumerStatefulWidget {
   const MainTvScreen({super.key});
@@ -13,10 +15,25 @@ class MainTvScreen extends ConsumerStatefulWidget {
 class _MainTvScreenState extends ConsumerState<MainTvScreen> {
   int _selectedIndex = 0;
 
+  void _solicitarInicio(dynamic rutina) async {
+    final notifier = ref.read(wearSessionProvider.notifier);
+    final session = ref.read(wearSessionProvider);
+    if (session.currentExercise != null && !session.isComplete) {
+      Navigator.of(context).pushNamed('/tv/session');
+      return;
+    }
+    await notifier.solicitarSesion(rutina);
+    if (!mounted) return;
+    Navigator.of(context).pushNamed('/tv/session');
+  }
+
   @override
   Widget build(BuildContext context) {
     final rutinasAsync = ref.watch(rutinasProvider);
     final perfilAsync = ref.watch(perfilProvider);
+    final historialSemanalAsync = ref.watch(historialSemanalProvider);
+    final historialAsync = ref.watch(historialProvider);
+    final session = ref.watch(wearSessionProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0F),
@@ -31,12 +48,17 @@ class _MainTvScreenState extends ConsumerState<MainTvScreen> {
                   children: [
                     Expanded(
                       flex: 3,
-                      child: _buildMainPanel(rutinasAsync),
+                      child: _buildMainPanel(
+                        rutinasAsync,
+                        historialAsync,
+                        historialSemanalAsync,
+                        session,
+                      ),
                     ),
                     const SizedBox(width: 20),
                     Expanded(
                       flex: 2,
-                      child: _buildSideCards(rutinasAsync),
+                      child: _buildSideCards(rutinasAsync, historialSemanalAsync),
                     ),
                   ],
                 ),
@@ -88,6 +110,8 @@ class _MainTvScreenState extends ConsumerState<MainTvScreen> {
           const SizedBox(width: 16),
           _buildNavItem('Historial', 2),
           const Spacer(),
+          _buildStatsButton(),
+          const SizedBox(width: 16),
           perfilAsync.when(
             data: (perfil) => Row(
               children: [
@@ -134,38 +158,95 @@ class _MainTvScreenState extends ConsumerState<MainTvScreen> {
     );
   }
 
-  Widget _buildNavItem(String label, int index) {
-    final isSelected = _selectedIndex == index;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedIndex = index),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFFC8F135).withValues(alpha: 0.15)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isSelected
-                ? const Color(0xFFC8F135)
-                : Colors.transparent,
+  Widget _buildStatsButton() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => Navigator.of(context).pushNamed('/tv/stats'),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E1E24),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFF2A2A35)),
           ),
-        ),
-        child: Text(
-          label,
-          style: GoogleFonts.zenDots(
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected
-                ? const Color(0xFFC8F135)
-                : const Color(0xFF6B6B80),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.analytics,
+                  color: Color(0xFFC8F135), size: 16),
+              const SizedBox(width: 8),
+              Text(
+                'Estadísticas',
+                style: GoogleFonts.zenDots(
+                  fontSize: 12,
+                  color: const Color(0xFFE8E8F0),
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildMainPanel(AsyncValue<List<dynamic>> rutinasAsync) {
+  Widget _buildNavItem(String label, int index) {
+    final isSelected = _selectedIndex == index;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => setState(() => _selectedIndex = index),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? const Color(0xFFC8F135).withValues(alpha: 0.15)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isSelected
+                  ? const Color(0xFFC8F135)
+                  : Colors.transparent,
+            ),
+          ),
+          child: Text(
+            label,
+            style: GoogleFonts.zenDots(
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: isSelected
+                  ? const Color(0xFFC8F135)
+                  : const Color(0xFF6B6B80),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMainPanel(
+    AsyncValue<List<dynamic>> rutinasAsync,
+    AsyncValue<List<Map<String, dynamic>>> historialAsync,
+    AsyncValue<List<Map<String, dynamic>>> historialSemanalAsync,
+    dynamic session,
+  ) {
+    switch (_selectedIndex) {
+      case 1:
+        return _buildRutinasPanel(rutinasAsync);
+      case 2:
+        return _buildHistorialPanel(historialAsync);
+      default:
+        return _buildInicioPanel(rutinasAsync, historialSemanalAsync, session);
+    }
+  }
+
+  Widget _buildInicioPanel(
+    AsyncValue<List<dynamic>> rutinasAsync,
+    AsyncValue<List<Map<String, dynamic>>> historialSemanalAsync,
+    dynamic session,
+  ) {
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF1E1E24),
@@ -208,7 +289,9 @@ class _MainTvScreenState extends ConsumerState<MainTvScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Bienvenido a FitNexus',
+                      session.currentExercise != null && !session.isComplete
+                          ? 'Entrenamiento en curso'
+                          : 'Bienvenido a FitNexus',
                       style: GoogleFonts.zenDots(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -217,7 +300,9 @@ class _MainTvScreenState extends ConsumerState<MainTvScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Tu entrenador personal inteligente',
+                      session.currentExercise != null && !session.isComplete
+                          ? 'Sincronizado con tu teléfono'
+                          : 'Elige una rutina para empezar',
                       style: GoogleFonts.zenDots(
                         fontSize: 12,
                         color: const Color(0xFF6B6B80),
@@ -232,9 +317,9 @@ class _MainTvScreenState extends ConsumerState<MainTvScreen> {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                _buildMainButton(),
+                _buildMainButton(rutinasAsync, session),
                 const Spacer(),
-                _buildQuickStats(),
+                _buildQuickStats(session),
               ],
             ),
           ),
@@ -243,48 +328,85 @@ class _MainTvScreenState extends ConsumerState<MainTvScreen> {
     );
   }
 
-  Widget _buildMainButton() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFC8F135),
+  Widget _buildMainButton(AsyncValue<List<dynamic>> rutinasAsync, dynamic session) {
+    final enCurso = session.currentExercise != null && !session.isComplete;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFC8F135).withValues(alpha: 0.3),
-            blurRadius: 12,
-            spreadRadius: 2,
+        onTap: enCurso
+            ? () => Navigator.of(context).pushNamed('/tv/session')
+            : () {
+                if (rutinasAsync.valueOrNull == null ||
+                    rutinasAsync.valueOrNull!.isEmpty) return;
+                _solicitarInicio(rutinasAsync.valueOrNull!.first);
+              },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFC8F135),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFC8F135).withValues(alpha: 0.3),
+                blurRadius: 12,
+                spreadRadius: 2,
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.play_arrow_rounded, color: Colors.black, size: 24),
-          const SizedBox(width: 8),
-          Text(
-            'Iniciar Entrenamiento',
-            style: GoogleFonts.zenDots(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                enCurso ? Icons.tv : Icons.play_arrow_rounded,
+                color: Colors.black,
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                enCurso ? 'Ver Entrenamiento' : 'Iniciar Entrenamiento',
+                style: GoogleFonts.zenDots(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildQuickStats() {
+  Widget _buildQuickStats(dynamic session) {
     return Row(
       children: [
-        _buildStatChip(Icons.timer_outlined, '0:00', const Color(0xFFC8F135)),
+        _buildStatChip(
+          Icons.timer_outlined,
+          _formatTiempo(session.elapsedSeconds),
+          const Color(0xFFC8F135),
+        ),
         const SizedBox(width: 12),
-        _buildStatChip(Icons.local_fire_department_outlined, '0 cal', const Color(0xFFFF4D6D)),
+        _buildStatChip(
+          Icons.local_fire_department_outlined,
+          '${session.calories} cal',
+          const Color(0xFFFF4D6D),
+        ),
         const SizedBox(width: 12),
-        _buildStatChip(Icons.favorite_outline, '72 bpm', const Color(0xFF5B8DEE)),
+        _buildStatChip(
+          Icons.favorite_outline,
+          '${session.heartRateBpm} bpm',
+          const Color(0xFF5B8DEE),
+        ),
       ],
     );
+  }
+
+  String _formatTiempo(int segundos) {
+    final m = (segundos ~/ 60).toString().padLeft(2, '0');
+    final s = (segundos % 60).toString().padLeft(2, '0');
+    return '$m:$s';
   }
 
   Widget _buildStatChip(IconData icon, String value, Color color) {
@@ -313,7 +435,246 @@ class _MainTvScreenState extends ConsumerState<MainTvScreen> {
     );
   }
 
-  Widget _buildSideCards(AsyncValue<List<dynamic>> rutinasAsync) {
+  Widget _buildRutinasPanel(AsyncValue<List<dynamic>> rutinasAsync) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E24),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF2A2A35)),
+      ),
+      child: rutinasAsync.when(
+        data: (rutinas) {
+          if (rutinas.isEmpty) {
+            return _buildEmptyState('No tienes rutinas creadas');
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Text(
+                  'Elige una rutina',
+                  style: GoogleFonts.zenDots(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFFE8E8F0),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: rutinas.length,
+                  itemBuilder: (context, index) => _buildRutinaTile(rutinas[index], autofocus: index == 0),
+                ),
+              ),
+            ],
+          );
+        },
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: Color(0xFFC8F135)),
+        ),
+        error: (_, __) => _buildEmptyState('Error al cargar rutinas'),
+      ),
+    );
+  }
+
+  Widget _buildRutinaTile(dynamic rutina, {bool autofocus = false}) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        autofocus: autofocus,
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _solicitarInicio(rutina),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF16161A),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF2A2A35)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFC8F135).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.fitness_center,
+                  color: Color(0xFFC8F135),
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      rutina.nombre,
+                      style: GoogleFonts.zenDots(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFFE8E8F0),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      '${rutina.totalEjercicios} ejercicios · ${rutina.duracionEstimadaMinutos} min',
+                      style: GoogleFonts.zenDots(
+                        fontSize: 11,
+                        color: const Color(0xFF6B6B80),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.play_arrow_rounded,
+                  color: Color(0xFFC8F135), size: 26),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHistorialPanel(AsyncValue<List<Map<String, dynamic>>> historialAsync) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E24),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF2A2A35)),
+      ),
+      child: historialAsync.when(
+        data: (historial) {
+          if (historial.isEmpty) {
+            return _buildEmptyState('Aún no hay entrenamientos registrados');
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    Text(
+                      'Historial reciente',
+                      style: GoogleFonts.zenDots(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFFE8E8F0),
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${historial.length} entrenamientos',
+                      style: GoogleFonts.zenDots(
+                        fontSize: 12,
+                        color: const Color(0xFF6B6B80),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: historial.length.clamp(0, 20),
+                  itemBuilder: (context, index) {
+                    final item = historial[index];
+                    final fecha = (item['fecha'] as Timestamp?)?.toDate();
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF16161A),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.check_circle,
+                              color: Color(0xFFC8F135), size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              item['nombreRutina'] ?? 'Rutina',
+                              style: GoogleFonts.zenDots(
+                                fontSize: 13,
+                                color: const Color(0xFFE8E8F0),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Text(
+                            '${item['duracionMinutos'] ?? 0} min',
+                            style: GoogleFonts.zenDots(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF5B8DEE),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Text(
+                            fecha != null ? _formatFecha(fecha) : '',
+                            style: GoogleFonts.zenDots(
+                              fontSize: 11,
+                              color: const Color(0xFF6B6B80),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
+        },
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: Color(0xFFC8F135)),
+        ),
+        error: (_, __) => _buildEmptyState('Error al cargar historial'),
+      ),
+    );
+  }
+
+  String _formatFecha(DateTime fecha) {
+    const meses = [
+      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
+    ];
+    return '${fecha.day} ${meses[fecha.month - 1]}';
+  }
+
+  Widget _buildEmptyState(String mensaje) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.fitness_center,
+              color: Color(0xFF2A2A35), size: 56),
+          const SizedBox(height: 12),
+          Text(
+            mensaje,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.zenDots(
+              fontSize: 13,
+              color: const Color(0xFF6B6B80),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSideCards(
+    AsyncValue<List<dynamic>> rutinasAsync,
+    AsyncValue<List<Map<String, dynamic>>> historialSemanalAsync,
+  ) {
     return Column(
       children: [
         Expanded(
@@ -321,7 +682,7 @@ class _MainTvScreenState extends ConsumerState<MainTvScreen> {
         ),
         const SizedBox(height: 20),
         Expanded(
-          child: _buildProgressCard(),
+          child: _buildProgressCard(historialSemanalAsync),
         ),
       ],
     );
@@ -341,7 +702,7 @@ class _MainTvScreenState extends ConsumerState<MainTvScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.list, color: const Color(0xFFC8F135), size: 20),
+              const Icon(Icons.list, color: Color(0xFFC8F135), size: 20),
               const SizedBox(width: 8),
               Text(
                 'Mis Rutinas',
@@ -372,53 +733,63 @@ class _MainTvScreenState extends ConsumerState<MainTvScreen> {
                   itemCount: rutinas.length.clamp(0, 3),
                   itemBuilder: (context, index) {
                     final rutina = rutinas[index];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF16161A),
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
                         borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFC8F135).withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(
-                              Icons.fitness_center,
-                              color: Color(0xFFC8F135),
-                              size: 20,
-                            ),
+                        onTap: () => _solicitarInicio(rutina),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF16161A),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  rutina.nombre,
-                                  style: GoogleFonts.zenDots(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFFE8E8F0),
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFC8F135)
+                                      .withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                                Text(
-                                  '${rutina.totalEjercicios} ejercicios · ${rutina.duracionEstimadaMinutos} min',
-                                  style: GoogleFonts.zenDots(
-                                    fontSize: 10,
-                                    color: const Color(0xFF6B6B80),
-                                  ),
+                                child: const Icon(
+                                  Icons.fitness_center,
+                                  color: Color(0xFFC8F135),
+                                  size: 20,
                                 ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      rutina.nombre,
+                                      style: GoogleFonts.zenDots(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color(0xFFE8E8F0),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      '${rutina.totalEjercicios} ejercicios · ${rutina.duracionEstimadaMinutos} min',
+                                      style: GoogleFonts.zenDots(
+                                        fontSize: 10,
+                                        color: const Color(0xFF6B6B80),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.chevron_right,
+                                  color: Color(0xFF6B6B80), size: 20),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     );
                   },
@@ -445,7 +816,24 @@ class _MainTvScreenState extends ConsumerState<MainTvScreen> {
     );
   }
 
-  Widget _buildProgressCard() {
+  Widget _buildProgressCard(
+      AsyncValue<List<Map<String, dynamic>>> historialSemanalAsync) {
+    final historial = historialSemanalAsync.valueOrNull ?? <Map<String, dynamic>>[];
+
+    final minutosPorDia = List<double>.filled(7, 0);
+    for (final item in historial) {
+      final fecha = (item['fecha'] as Timestamp?)?.toDate();
+      if (fecha == null) continue;
+      final index = (fecha.weekday - 1) % 7;
+      minutosPorDia[index] += (item['duracionMinutos'] as num?)?.toDouble() ?? 0;
+    }
+    final maxMinutos = minutosPorDia.fold<double>(0, (a, b) => a > b ? a : b);
+
+    final minutosTotales = historial.fold<int>(
+        0, (sum, item) => sum + ((item['duracionMinutos'] as num?)?.toInt() ?? 0));
+    final sesiones = historial.length;
+    final racha = _calcularRacha(historial);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -459,7 +847,7 @@ class _MainTvScreenState extends ConsumerState<MainTvScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.trending_up, color: const Color(0xFFC8F135), size: 20),
+              const Icon(Icons.trending_up, color: Color(0xFFC8F135), size: 20),
               const SizedBox(width: 8),
               Text(
                 'Progreso Semanal',
@@ -476,24 +864,20 @@ class _MainTvScreenState extends ConsumerState<MainTvScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                _buildMiniBar(0.3, 'L'),
-                _buildMiniBar(0.7, 'M'),
-                _buildMiniBar(0.5, 'M'),
-                _buildMiniBar(0.9, 'J'),
-                _buildMiniBar(0.4, 'V'),
-                _buildMiniBar(0.0, 'S'),
-                _buildMiniBar(0.0, 'D'),
-              ],
+              children: List.generate(7, (i) {
+                final factor = maxMinutos > 0 ? minutosPorDia[i] / maxMinutos : 0.0;
+                return _buildMiniBar(factor, _diaCorto(i), minutosPorDia[i]);
+              }),
             ),
           ),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildProgressStat('Sesiones', '3', const Color(0xFFC8F135)),
-              _buildProgressStat('Minutos', '45', const Color(0xFF5B8DEE)),
-              _buildProgressStat('Racha', '5 días', const Color(0xFFFF4D6D)),
+              _buildProgressStat('Sesiones', '$sesiones', const Color(0xFFC8F135)),
+              _buildProgressStat('Minutos', '$minutosTotales', const Color(0xFF5B8DEE)),
+              _buildProgressStat('Racha', racha == 1 ? '1 día' : '$racha días',
+                  const Color(0xFFFF4D6D)),
             ],
           ),
         ],
@@ -501,10 +885,46 @@ class _MainTvScreenState extends ConsumerState<MainTvScreen> {
     );
   }
 
-  Widget _buildMiniBar(double height, String label) {
+  int _calcularRacha(List<Map<String, dynamic>> historial) {
+    final dias = <DateTime>{};
+    for (final item in historial) {
+      final fecha = (item['fecha'] as Timestamp?)?.toDate();
+      if (fecha != null) dias.add(DateTime(fecha.year, fecha.month, fecha.day));
+    }
+    if (dias.isEmpty) return 0;
+
+    var hoy = DateTime.now();
+    hoy = DateTime(hoy.year, hoy.month, hoy.day);
+    if (!dias.contains(hoy)) {
+      hoy = hoy.subtract(const Duration(days: 1));
+      if (!dias.contains(hoy)) return 0;
+    }
+
+    int racha = 0;
+    while (dias.contains(hoy)) {
+      racha++;
+      hoy = hoy.subtract(const Duration(days: 1));
+    }
+    return racha;
+  }
+
+  String _diaCorto(int index) {
+    const dias = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+    return dias[index];
+  }
+
+  Widget _buildMiniBar(double height, String label, double minutos) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
+        if (minutos > 0)
+          Text(
+            '${minutos.round()}',
+            style: GoogleFonts.zenDots(
+              fontSize: 8,
+              color: const Color(0xFF6B6B80),
+            ),
+          ),
         Container(
           width: 24,
           height: 60 * height,

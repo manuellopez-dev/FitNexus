@@ -4,30 +4,59 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/data/exercise_gif_mapping.dart';
 import '../../wear/providers/wear_session_provider.dart';
 
-class ActiveSessionTvScreen extends ConsumerWidget {
+class ActiveSessionTvScreen extends ConsumerStatefulWidget {
   const ActiveSessionTvScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ActiveSessionTvScreen> createState() =>
+      _ActiveSessionTvScreenState();
+}
+
+class _ActiveSessionTvScreenState extends ConsumerState<ActiveSessionTvScreen> {
+  @override
+  Widget build(BuildContext context) {
     final session = ref.watch(wearSessionProvider);
 
     if (session.currentExercise == null) {
       return Scaffold(
         backgroundColor: const Color(0xFF0D0D0F),
         body: Center(
-          child: Text(
-            'Sin sesión activa',
-            style: GoogleFonts.zenDots(
-              fontSize: 18,
-              color: const Color(0xFF6B6B80),
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.tv_off, color: Color(0xFF2A2A35), size: 64),
+              const SizedBox(height: 16),
+              Text(
+                'Sin sesión activa',
+                style: GoogleFonts.zenDots(
+                  fontSize: 18,
+                  color: const Color(0xFF6B6B80),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                autofocus: true,
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFC8F135),
+                  foregroundColor: Colors.black,
+                ),
+                child: Text(
+                  'Volver',
+                  style: GoogleFonts.zenDots(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
           ),
         ),
       );
     }
 
     final ejercicio = session.currentExercise!;
-    final gifUrl = exerciseGifMapping[ejercicio.nombre] ?? '';
+    final rawGif = session.currentExercise!.gifUrl;
+    final gifUrl = (rawGif.isNotEmpty && !rawGif.contains('workoutxapp'))
+        ? rawGif
+        : (exerciseGifMapping[ejercicio.nombre] ?? '');
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0F),
@@ -43,7 +72,7 @@ class ActiveSessionTvScreen extends ConsumerWidget {
               const SizedBox(width: 20),
               Expanded(
                 flex: 2,
-                child: _buildSidePanel(session, ejercicio),
+                child: _buildSidePanel(context, session, ejercicio),
               ),
             ],
           ),
@@ -111,6 +140,10 @@ class ActiveSessionTvScreen extends ConsumerWidget {
                 'Siguiente Serie',
                 const Color(0xFFC8F135),
                 Icons.skip_next,
+                autofocus: true,
+                onPressed: () => ref
+                    .read(wearSessionProvider.notifier)
+                    .nextSet(),
               ),
             ),
             const SizedBox(width: 12),
@@ -119,6 +152,9 @@ class ActiveSessionTvScreen extends ConsumerWidget {
                 'Siguiente Ejercicio',
                 const Color(0xFFC8F135),
                 Icons.fast_forward,
+                onPressed: () => ref
+                    .read(wearSessionProvider.notifier)
+                    .nextExercise(),
               ),
             ),
           ],
@@ -158,32 +194,46 @@ class ActiveSessionTvScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildControlButton(String label, Color color, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      decoration: BoxDecoration(
-        color: color,
+  Widget _buildControlButton(
+    String label,
+    Color color,
+    IconData icon, {
+    VoidCallback? onPressed,
+    bool autofocus = false,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        autofocus: autofocus,
         borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: Colors.black, size: 20),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: GoogleFonts.zenDots(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-            ),
+        onTap: onPressed,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(12),
           ),
-        ],
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.black, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: GoogleFonts.zenDots(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildSidePanel(WearSessionState session, dynamic ejercicio) {
+  Widget _buildSidePanel(BuildContext context, WearSessionState session, dynamic ejercicio) {
     return Column(
       children: [
         Expanded(
@@ -195,9 +245,27 @@ class ActiveSessionTvScreen extends ConsumerWidget {
           flex: 1,
           child: Row(
             children: [
-              Expanded(child: _buildStatusBlock('EN VIVO', const Color(0xFFFF4D6D), Icons.circle, true)),
+              Expanded(
+                child: _buildStatusBlock(
+                  session.isComplete ? 'FINALIZADO' : 'EN VIVO',
+                  session.isComplete
+                      ? const Color(0xFF5B8DEE)
+                      : const Color(0xFFFF4D6D),
+                  session.isComplete ? Icons.check_circle : Icons.circle,
+                  true,
+                ),
+              ),
               const SizedBox(width: 8),
-              Expanded(child: _buildStatusBlock('ACTIVO', const Color(0xFFC8F135), Icons.check_circle, true)),
+              Expanded(
+                child: _buildStatusBlock(
+                  session.isResting ? 'DESCANSO' : 'ACTIVO',
+                  session.isResting
+                      ? const Color(0xFF5B8DEE)
+                      : const Color(0xFFC8F135),
+                  session.isResting ? Icons.nightlight_round : Icons.check_circle,
+                  true,
+                ),
+              ),
             ],
           ),
         ),
@@ -209,7 +277,7 @@ class ActiveSessionTvScreen extends ConsumerWidget {
         const SizedBox(height: 12),
         Expanded(
           flex: 1,
-          child: _buildQuickActions(),
+          child: _buildQuickActions(context, session),
         ),
       ],
     );
@@ -391,31 +459,48 @@ class ActiveSessionTvScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuickActions() {
+  Widget _buildQuickActions(BuildContext context, WearSessionState session) {
     return Row(
       children: [
-        _buildCircularAction(Icons.pause, const Color(0xFF5B8DEE)),
+        _buildCircularAction(
+          Icons.flag,
+          const Color(0xFFFF4D6D),
+          () => ref.read(wearSessionProvider.notifier).finishWorkout(),
+        ),
         const SizedBox(width: 8),
-        _buildCircularAction(Icons.volume_up, const Color(0xFFC8F135)),
+        _buildCircularAction(
+          Icons.skip_next,
+          const Color(0xFF5B8DEE),
+          () => ref.read(wearSessionProvider.notifier).nextSet(),
+        ),
         const SizedBox(width: 8),
-        _buildCircularAction(Icons.refresh, const Color(0xFFFF4D6D)),
+        _buildCircularAction(
+          Icons.fast_forward,
+          const Color(0xFFC8F135),
+          () => ref.read(wearSessionProvider.notifier).nextExercise(),
+        ),
         const SizedBox(width: 8),
-        _buildCircularAction(Icons.settings, const Color(0xFF6B6B80)),
+        _buildCircularAction(
+          Icons.home,
+          const Color(0xFF6B6B80),
+          () => Navigator.of(context).pop(),
+        ),
       ],
     );
   }
 
-  Widget _buildCircularAction(IconData icon, Color color) {
+  Widget _buildCircularAction(IconData icon, Color color, VoidCallback onPressed) {
     return Expanded(
       child: AspectRatio(
         aspectRatio: 1,
-        child: Container(
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.15),
-            shape: BoxShape.circle,
-            border: Border.all(color: color),
+        child: Material(
+          color: color.withValues(alpha: 0.15),
+          shape: CircleBorder(side: BorderSide(color: color)),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onPressed,
+            child: Center(child: Icon(icon, color: color, size: 20)),
           ),
-          child: Icon(icon, color: color, size: 20),
         ),
       ),
     );

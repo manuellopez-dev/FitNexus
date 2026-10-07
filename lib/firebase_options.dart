@@ -47,27 +47,27 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDh3ULmf4EUX9Aj9TnoprBUfkSmA1qh4Oc',
-    appId: '1:96954918433:android:17e92dcabbafe017626560',
-    messagingSenderId: '96954918433',
-    projectId: 'fitnexus-app-61488',
-    storageBucket: 'fitnexus-app-61488.firebasestorage.app',
+    apiKey: 'AIzaSyC0wvfIonj5qsOfjI_HS0ue-8NDUkN3GWo',
+    appId: '1:249410443748:android:06d59927fc761c35c78ff1',
+    messagingSenderId: '249410443748',
+    projectId: 'fitnexus-63fc5',
+    storageBucket: 'fitnexus-63fc5.firebasestorage.app',
   );
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyA_gt1A9rCYTBgCvM_aMSyGMKklnkoqizE',
-    appId: '1:96954918433:ios:b9fc85d75014686c626560',
-    messagingSenderId: '96954918433',
-    projectId: 'fitnexus-app-61488',
-    storageBucket: 'fitnexus-app-61488.firebasestorage.app',
-    iosClientId: '96954918433-fc0aurkh8m3agvbuvucdgf04cvv8kdhs.apps.googleusercontent.com',
+    apiKey: 'AIzaSyA3I8MeZpUO92YN6zzMucn0-HPL7XKNqQE',
+    appId: '1:249410443748:ios:d143fff210841736c78ff1',
+    messagingSenderId: '249410443748',
+    projectId: 'fitnexus-63fc5',
+    storageBucket: 'fitnexus-63fc5.firebasestorage.app',
     iosBundleId: 'com.fitnexus.fitnexus',
   );
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBrSBgqsTWoMrqcYal-L1jN5z94ubzw6G0',
-    appId: '1:96954918433:web:3b2aa447a04cc754626560',
-    messagingSenderId: '96954918433',
-    projectId: 'fitnexus-app-61488',
-    authDomain: 'fitnexus-app-61488.firebaseapp.com',
-    storageBucket: 'fitnexus-app-61488.firebasestorage.app',
+    apiKey: 'AIzaSyAIyyJI_tTijVJidIZBF6MqgFCQbbL_N5A',
+    appId: '1:249410443748:web:e6eab69c79397324c78ff1',
+    messagingSenderId: '249410443748',
+    projectId: 'fitnexus-63fc5',
+    authDomain: 'fitnexus-63fc5.firebaseapp.com',
+    storageBucket: 'fitnexus-63fc5.firebasestorage.app',
+    measurementId: 'G-L1JKFBMC9N',
   );
 }
