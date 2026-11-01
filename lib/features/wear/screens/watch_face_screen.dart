@@ -48,46 +48,57 @@ class _WatchFaceScreenState extends ConsumerState<WatchFaceScreen> {
     return Container(
       color: const Color(0xFF0D0D0F),
       child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildHeader(),
-              _buildCircleIndicator(session),
-              _buildBars(session),
-              _buildIndicators(session),
-              _buildButton(rutinasAsync, session),
-            ],
-          ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final scale = (constraints.maxWidth / 200).clamp(0.7, 1.0);
+            return Padding(
+              padding: EdgeInsets.symmetric(horizontal: 10 * scale, vertical: 4 * scale),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildHeader(scale),
+                    SizedBox(height: 2 * scale),
+                    _buildCircleIndicator(session, scale),
+                    SizedBox(height: 4 * scale),
+                    _buildBars(session, scale),
+                    SizedBox(height: 4 * scale),
+                    _buildIndicators(session, scale),
+                    SizedBox(height: 6 * scale),
+                    _buildButton(rutinasAsync, session, scale),
+                  ],
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(double scale) {
     return Column(
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.bolt, color: const Color(0xFFC8F135), size: 14),
-            const SizedBox(width: 4),
+            Icon(Icons.bolt, color: const Color(0xFFC8F135), size: 12 * scale),
+            SizedBox(width: 3 * scale),
             Text(
               'Watch Face',
               style: GoogleFonts.zenDots(
-                fontSize: 10,
+                fontSize: 8 * scale,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF6B6B80),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: 2 * scale),
         Text(
           _hora,
           style: GoogleFonts.zenDots(
-            fontSize: 14,
+            fontSize: 12 * scale,
             fontWeight: FontWeight.bold,
             color: const Color(0xFFE8E8F0),
           ),
@@ -95,7 +106,7 @@ class _WatchFaceScreenState extends ConsumerState<WatchFaceScreen> {
         Text(
           _fecha,
           style: GoogleFonts.zenDots(
-            fontSize: 8,
+            fontSize: 7 * scale,
             color: const Color(0xFF6B6B80),
           ),
         ),
@@ -103,19 +114,19 @@ class _WatchFaceScreenState extends ConsumerState<WatchFaceScreen> {
     );
   }
 
-  Widget _buildCircleIndicator(WearSessionState session) {
+  Widget _buildCircleIndicator(WearSessionState session, double scale) {
     final bpm = session.heartRateBpm;
     final progress = (bpm / 180).clamp(0.0, 1.0);
 
     return SizedBox(
-      width: 140,
-      height: 140,
+      width: 110 * scale,
+      height: 110 * scale,
       child: CustomPaint(
         painter: _CircleProgressPainter(
           progress: progress,
           progressColor: const Color(0xFFC8F135),
           backgroundColor: const Color(0xFF1E1E24),
-          strokeWidth: 8,
+          strokeWidth: 6 * scale,
         ),
         child: Center(
           child: Column(
@@ -124,7 +135,7 @@ class _WatchFaceScreenState extends ConsumerState<WatchFaceScreen> {
               Text(
                 '$bpm',
                 style: GoogleFonts.zenDots(
-                  fontSize: 32,
+                  fontSize: 24 * scale,
                   fontWeight: FontWeight.bold,
                   color: const Color(0xFFE8E8F0),
                 ),
@@ -132,7 +143,7 @@ class _WatchFaceScreenState extends ConsumerState<WatchFaceScreen> {
               Text(
                 'BPM',
                 style: GoogleFonts.zenDots(
-                  fontSize: 10,
+                  fontSize: 8 * scale,
                   color: const Color(0xFF6B6B80),
                 ),
               ),
@@ -143,7 +154,7 @@ class _WatchFaceScreenState extends ConsumerState<WatchFaceScreen> {
     );
   }
 
-  Widget _buildBars(WearSessionState session) {
+  Widget _buildBars(WearSessionState session, double scale) {
     final totalEjercicios = session.totalExercises > 0 ? session.totalExercises : 1;
     final totalSeries = session.totalSets > 0 ? session.totalSets : 1;
     final progresoEjercicio = session.currentExerciseIndex / totalEjercicios;
@@ -154,34 +165,34 @@ class _WatchFaceScreenState extends ConsumerState<WatchFaceScreen> {
 
     return Column(
       children: [
-        _buildBar('Tiempo', progresoTiempo),
-        const SizedBox(height: 6),
-        _buildBar('Series', progresoSerie),
-        const SizedBox(height: 6),
-        _buildBar('Ejercicios', progresoEjercicio),
+        _buildBar('Tiempo', progresoTiempo, scale),
+        SizedBox(height: 4 * scale),
+        _buildBar('Series', progresoSerie, scale),
+        SizedBox(height: 4 * scale),
+        _buildBar('Ejercicios', progresoEjercicio, scale),
       ],
     );
   }
 
-  Widget _buildBar(String label, double progress) {
+  Widget _buildBar(String label, double progress, double scale) {
     return Row(
       children: [
         SizedBox(
-          width: 48,
+          width: 38 * scale,
           child: Text(
             label,
             style: GoogleFonts.zenDots(
-              fontSize: 8,
+              fontSize: 6.5 * scale,
               color: const Color(0xFF6B6B80),
             ),
           ),
         ),
         Expanded(
           child: Container(
-            height: 8,
+            height: 6 * scale,
             decoration: BoxDecoration(
               color: const Color(0xFF2A2A35),
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(3 * scale),
             ),
             child: FractionallySizedBox(
               alignment: Alignment.centerLeft,
@@ -189,7 +200,7 @@ class _WatchFaceScreenState extends ConsumerState<WatchFaceScreen> {
               child: Container(
                 decoration: BoxDecoration(
                   color: const Color(0xFFC8F135),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(3 * scale),
                 ),
               ),
             ),
@@ -199,7 +210,7 @@ class _WatchFaceScreenState extends ConsumerState<WatchFaceScreen> {
     );
   }
 
-  Widget _buildIndicators(WearSessionState session) {
+  Widget _buildIndicators(WearSessionState session, double scale) {
     final bpm = session.heartRateBpm;
     final bool isAlto = bpm > 120;
     final bool isBajo = bpm < 80;
@@ -211,11 +222,13 @@ class _WatchFaceScreenState extends ConsumerState<WatchFaceScreen> {
           color: const Color(0xFFFF4D6D),
           label: 'ALTO',
           active: isAlto,
+          scale: scale,
         ),
         _buildIndicatorDot(
           color: const Color(0xFF4CAF50),
           label: 'BAJO',
           active: isBajo,
+          scale: scale,
         ),
       ],
     );
@@ -225,6 +238,7 @@ class _WatchFaceScreenState extends ConsumerState<WatchFaceScreen> {
     required Color color,
     required String label,
     required bool active,
+    required double scale,
   }) {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -260,24 +274,24 @@ class _WatchFaceScreenState extends ConsumerState<WatchFaceScreen> {
   }
 
   Widget _buildButton(
-      AsyncValue<List<dynamic>> rutinasAsync, WearSessionState session) {
+      AsyncValue<List<dynamic>> rutinasAsync, WearSessionState session, double scale) {
     if (session.isWaiting && session.currentExercise == null) {
       return Column(
         children: [
-          const SizedBox(
-            width: 16,
-            height: 16,
+          SizedBox(
+            width: 14 * scale,
+            height: 14 * scale,
             child: CircularProgressIndicator(
-              color: Color(0xFFC8F135),
-              strokeWidth: 2,
+              color: const Color(0xFFC8F135),
+              strokeWidth: 2 * scale,
             ),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: 4 * scale),
           Text(
             'Esperando el móvil...',
             textAlign: TextAlign.center,
             style: GoogleFonts.zenDots(
-              fontSize: 9,
+              fontSize: 7.5 * scale,
               color: const Color(0xFFC8F135),
             ),
           ),
@@ -291,14 +305,14 @@ class _WatchFaceScreenState extends ConsumerState<WatchFaceScreen> {
           return Text(
             'Sin rutinas disponibles',
             style: GoogleFonts.zenDots(
-              fontSize: 9,
+              fontSize: 8 * scale,
               color: const Color(0xFF6B6B80),
             ),
           );
         }
         return SizedBox(
           width: double.infinity,
-          height: 32,
+          height: 28 * scale,
           child: ElevatedButton(
             onPressed: () =>
                 ref.read(wearSessionProvider.notifier).solicitarSesion(rutinas.first),
@@ -307,40 +321,42 @@ class _WatchFaceScreenState extends ConsumerState<WatchFaceScreen> {
               foregroundColor: Colors.black,
               padding: EdgeInsets.zero,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(6 * scale),
               ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.play_arrow_rounded, size: 16, color: Colors.black),
-                const SizedBox(width: 4),
-                Text(
-                  rutinas.first.nombre,
-                  style: GoogleFonts.zenDots(
-                    fontSize: 9,
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
+                Icon(Icons.play_arrow_rounded, size: 14 * scale, color: Colors.black),
+                SizedBox(width: 3 * scale),
+                Flexible(
+                  child: Text(
+                    rutinas.first.nombre,
+                    style: GoogleFonts.zenDots(
+                      fontSize: 7.5 * scale,
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
         );
       },
-      loading: () => const SizedBox(
-        width: 16,
-        height: 16,
+      loading: () => SizedBox(
+        width: 14 * scale,
+        height: 14 * scale,
         child: CircularProgressIndicator(
-          color: Color(0xFFC8F135),
-          strokeWidth: 2,
+          color: const Color(0xFFC8F135),
+          strokeWidth: 2 * scale,
         ),
       ),
       error: (_, __) => Text(
         'Error al cargar',
         style: GoogleFonts.zenDots(
-          fontSize: 9,
+          fontSize: 8 * scale,
           color: const Color(0xFFFF4D6D),
         ),
       ),

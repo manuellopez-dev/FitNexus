@@ -72,6 +72,9 @@ class WearSessionNotifier extends Notifier<WearSessionState> {
 
   @override
   WearSessionState build() {
+    ref.listen(identityProvider, (prev, next) {
+      if (next != null) startWatchSession();
+    });
     ref.onDispose(() {
       _idSubscription?.cancel();
       _sessionSubscription?.cancel();
@@ -81,13 +84,13 @@ class WearSessionNotifier extends Notifier<WearSessionState> {
 
   /// Sigue la sesión activa del usuario (creada por el móvil o la TV)
   void startWatchSession() {
-    final user = ref.read(authStateProvider).valueOrNull;
-    if (user == null) return;
+    final uid = ref.read(identityProvider);
+    if (uid == null) return;
 
     _idSubscription?.cancel();
     _idSubscription = ref
         .read(syncServiceProvider)
-        .buscarSesionActiva(user.uid)
+        .buscarSesionActiva(uid)
         .listen((sessionId) {
       if (sessionId == _sessionId) return;
       _sessionSubscription?.cancel();
@@ -137,17 +140,17 @@ class WearSessionNotifier extends Notifier<WearSessionState> {
   /// Pide al móvil que abra esta rutina. El watch queda en espera
   /// hasta que el móvil active la sesión.
   Future<void> solicitarSesion(Routine routine) async {
-    final user = ref.read(authStateProvider).valueOrNull;
-    if (user == null || routine.ejercicios.isEmpty) return;
+    final uid = ref.read(identityProvider);
+    if (uid == null || routine.ejercicios.isEmpty) return;
 
     final primera = routine.ejercicios.first;
     state = WearSessionState(isWaiting: true);
 
-    await ref.read(syncServiceProvider).limpiarSesionesAnteriores(user.uid);
+    await ref.read(syncServiceProvider).limpiarSesionesAnteriores(uid);
     await ref.read(syncServiceProvider).crearSesion(
           ActiveSession(
             id: '',
-            hostUid: user.uid,
+            hostUid: uid,
             rutinaId: routine.id,
             rutinaNombre: routine.nombre,
             estado: 'solicitada',

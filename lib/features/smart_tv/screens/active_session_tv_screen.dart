@@ -498,6 +498,7 @@ class _ActiveSessionTvScreenState extends ConsumerState<ActiveSessionTvScreen> {
           shape: CircleBorder(side: BorderSide(color: color)),
           child: InkWell(
             customBorder: const CircleBorder(),
+            focusColor: color.withValues(alpha: 0.4),
             onTap: onPressed,
             child: Center(child: Icon(icon, color: color, size: 20)),
           ),

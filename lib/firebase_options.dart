@@ -52,6 +52,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '249410443748',
     projectId: 'fitnexus-63fc5',
     storageBucket: 'fitnexus-63fc5.firebasestorage.app',
+    databaseURL: 'https://fitnexus-63fc5-default-rtdb.firebaseio.com',
   );
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyA3I8MeZpUO92YN6zzMucn0-HPL7XKNqQE',
@@ -60,6 +61,7 @@ class DefaultFirebaseOptions {
     projectId: 'fitnexus-63fc5',
     storageBucket: 'fitnexus-63fc5.firebasestorage.app',
     iosBundleId: 'com.fitnexus.fitnexus',
+    databaseURL: 'https://fitnexus-63fc5-default-rtdb.firebaseio.com',
   );
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyAIyyJI_tTijVJidIZBF6MqgFCQbbL_N5A',
@@ -69,5 +71,6 @@ class DefaultFirebaseOptions {
     authDomain: 'fitnexus-63fc5.firebaseapp.com',
     storageBucket: 'fitnexus-63fc5.firebasestorage.app',
     measurementId: 'G-L1JKFBMC9N',
+    databaseURL: 'https://fitnexus-63fc5-default-rtdb.firebaseio.com',
   );
 }

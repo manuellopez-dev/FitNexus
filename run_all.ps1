@@ -4,7 +4,8 @@ param(
     [switch]$Stop
 )
 
-$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Continue'
+$PSNativeCommandUseErrorActionPreference = $false
 $root = $PSScriptRoot
 $sdk = if ($env:ANDROID_SDK_ROOT) { $env:ANDROID_SDK_ROOT } else { Join-Path $env:LOCALAPPDATA 'Android\Sdk' }
 $adb = Join-Path $sdk 'platform-tools\adb.exe'

@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/providers/auth_provider.dart';
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
-import 'features/smart_tv/screens/login_tv_screen.dart';
+import 'features/smart_tv/screens/link_tv_screen.dart';
 import 'features/smart_tv/screens/main_tv_screen.dart';
 import 'features/smart_tv/screens/active_session_tv_screen.dart';
 import 'features/smart_tv/screens/stats_tv_screen.dart';
@@ -14,9 +14,15 @@ import 'features/wear/providers/wear_session_provider.dart';
 @pragma('vm:entry-point')
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    } else {
+      Firebase.app();
+    }
+  } catch (_) {}
   runApp(
     const ProviderScope(
       child: FitNexusTvApp(),
@@ -29,16 +35,16 @@ class FitNexusTvApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authStateProvider);
+    final linked = ref.watch(linkedIdentityProvider);
 
     return MaterialApp(
       title: 'FitNexus TV',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: authState.isLoading
+      home: !linked.loaded
           ? const _SplashTv()
-          : authState.valueOrNull == null
-              ? const LoginTvScreen()
+          : linked.uid == null
+              ? const LinkTvScreen()
               : const _TvHome(),
       routes: {
         '/tv': (context) => const MainTvScreen(),
@@ -63,6 +69,23 @@ class _SplashTv extends StatelessWidget {
           strokeWidth: 3,
         ),
       ),
+    );
+  }
+}
+
+class _ForceLinkTv extends StatelessWidget {
+  const _ForceLinkTv();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: Future.delayed(const Duration(milliseconds: 1500)),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const _SplashTv();
+        }
+        return const LinkTvScreen();
+      },
     );
   }
 }

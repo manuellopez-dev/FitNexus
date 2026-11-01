@@ -124,46 +124,61 @@ class HomeScreen extends ConsumerWidget {
             ],
           ),
         ),
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: const Color(0xFF1E1E24),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFF2A2A35)),
+          Builder(
+            builder: (context) => GestureDetector(
+              onTap: () {
+                context.push('/settings/notificaciones');
+              },
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E1E24),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFF2A2A35)),
+                ),
+                child: const Icon(
+                  Icons.notifications_none,
+                  color: Color(0xFF6B6B80),
+                  size: 20,
+                ),
+              ),
+            ),
           ),
-          child: const Icon(
-            Icons.notifications_none,
-            color: Color(0xFF6B6B80),
-            size: 20,
-          ),
-        ),
-      ],
-    );
+        ],
+      );
   }
 
   Widget _buildRutinaDelDia(BuildContext context, List<Routine> rutinas, dynamic perfil) {
     if (rutinas.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1E1E24),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFF2A2A35)),
-        ),
-        child: Column(
-          children: [
-            Icon(Icons.fitness_center, color: const Color(0xFF6B6B80), size: 32),
-            const SizedBox(height: 8),
-            Text(
-              'Crea tu primera rutina',
-              style: GoogleFonts.zenDots(
-                fontSize: 12,
-                color: const Color(0xFF6B6B80),
+      return GestureDetector(
+        onTap: () {
+          // Navegar a crear rutina o simplemente a home - mejor a ejercicio/rutina tab
+          try {
+            if (context.mounted) context.go('/home');
+          } catch (_) {}
+        },
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E1E24),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFF2A2A35)),
+          ),
+          child: Column(
+            children: [
+              Icon(Icons.fitness_center, color: const Color(0xFFC8F135), size: 32),
+              const SizedBox(height: 8),
+              Text(
+                'Crea tu primera rutina',
+                style: GoogleFonts.zenDots(
+                  fontSize: 12,
+                  color: const Color(0xFFC8F135),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     }
@@ -223,7 +238,9 @@ class HomeScreen extends ConsumerWidget {
                 ],
               ),
               ElevatedButton(
-                onPressed: () => context.push('/workout', extra: rutinaFinal),
+                onPressed: () {
+                  context.push('/workout', extra: rutinaFinal);
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFC8F135),
                   foregroundColor: Colors.black,
@@ -350,16 +367,35 @@ class HomeScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '${rutinaFinal.nombre} · Ejercicios',
-          style: GoogleFonts.zenDots(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: const Color(0xFFE8E8F0),
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '${rutinaFinal.nombre} · Ejercicios',
+              style: GoogleFonts.zenDots(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFFE8E8F0),
+              ),
+            ),
+            Builder(
+              builder: (context) => GestureDetector(
+                onTap: () {
+                  context.push('/workout', extra: rutinaFinal);
+                },
+                child: Text(
+                  'Ver todos',
+                  style: GoogleFonts.zenDots(
+                    fontSize: 11,
+                    color: const Color(0xFFC8F135),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
-        ...ejercicios.map((e) => Container(
+        ...ejercicios.take(4).map((e) => Container(
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -417,6 +453,24 @@ class HomeScreen extends ConsumerWidget {
             ],
           ),
         )),
+        if (ejercicios.length > 4)
+          Builder(
+            builder: (context) => GestureDetector(
+              onTap: () {
+                context.push('/workout', extra: rutinaFinal);
+              },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                '+ ${ejercicios.length - 4} ejercicios más',
+                style: GoogleFonts.zenDots(
+                  fontSize: 11,
+                  color: const Color(0xFFC8F135),
+                ),
+              ),
+            ),
+          ),
+        )
       ],
     );
   }

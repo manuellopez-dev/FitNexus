@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/providers/auth_provider.dart';
@@ -14,17 +15,27 @@ class MainTvScreen extends ConsumerStatefulWidget {
 
 class _MainTvScreenState extends ConsumerState<MainTvScreen> {
   int _selectedIndex = 0;
+  final FocusNode _focusNode = FocusNode();
 
   void _solicitarInicio(dynamic rutina) async {
     final notifier = ref.read(wearSessionProvider.notifier);
     final session = ref.read(wearSessionProvider);
     if (session.currentExercise != null && !session.isComplete) {
+      if (!mounted) return;
       Navigator.of(context).pushNamed('/tv/session');
       return;
     }
-    await notifier.solicitarSesion(rutina);
+    try {
+      await notifier.solicitarSesion(rutina);
+    } catch (_) {}
     if (!mounted) return;
     Navigator.of(context).pushNamed('/tv/session');
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
   }
 
   @override
@@ -38,33 +49,53 @@ class _MainTvScreenState extends ConsumerState<MainTvScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0F),
       body: SafeArea(
-        child: Column(
-          children: [
-            _buildTopBar(perfilAsync),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: _buildMainPanel(
-                        rutinasAsync,
-                        historialAsync,
-                        historialSemanalAsync,
-                        session,
+        child: Focus(
+          focusNode: _focusNode,
+          autofocus: true,
+          onKeyEvent: (node, event) {
+            if (event is! KeyDownEvent) return KeyEventResult.ignored;
+            if (event.logicalKey == LogicalKeyboardKey.arrowLeft || event.logicalKey == LogicalKeyboardKey.goBack) {
+              if (_selectedIndex > 0) {
+                setState(() => _selectedIndex--);
+                return KeyEventResult.handled;
+              }
+            }
+            if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+              if (_selectedIndex < 2) {
+                setState(() => _selectedIndex++);
+                return KeyEventResult.handled;
+              }
+            }
+            return KeyEventResult.ignored;
+          },
+          child: Column(
+            children: [
+              _buildTopBar(perfilAsync),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: _buildMainPanel(
+                          rutinasAsync,
+                          historialAsync,
+                          historialSemanalAsync,
+                          session,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      flex: 2,
-                      child: _buildSideCards(rutinasAsync, historialSemanalAsync),
-                    ),
-                  ],
+                      const SizedBox(width: 20),
+                      Expanded(
+                        flex: 2,
+                        child: _buildSideCards(rutinasAsync, historialSemanalAsync),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -484,6 +515,8 @@ class _MainTvScreenState extends ConsumerState<MainTvScreen> {
       color: Colors.transparent,
       child: InkWell(
         autofocus: autofocus,
+        focusColor: const Color(0xFFC8F135).withValues(alpha: 0.2),
+        hoverColor: const Color(0xFFC8F135).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         onTap: () => _solicitarInicio(rutina),
         child: Container(

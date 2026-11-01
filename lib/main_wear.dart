@@ -5,7 +5,7 @@ import 'core/providers/auth_provider.dart';
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
 import 'features/wear/providers/wear_session_provider.dart';
-import 'features/wear/screens/login_wear_screen.dart';
+import 'features/wear/screens/link_wear_screen.dart';
 import 'features/wear/screens/watch_face_screen.dart';
 import 'features/wear/screens/ejercicio_screen.dart';
 import 'features/wear/screens/bpm_screen.dart';
@@ -15,9 +15,15 @@ import 'features/wear/screens/resumen_screen.dart';
 @pragma('vm:entry-point')
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    } else {
+      Firebase.app();
+    }
+  } catch (_) {}
   runApp(
     const ProviderScope(
       child: FitNexusWearApp(),
@@ -30,16 +36,16 @@ class FitNexusWearApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authStateProvider);
+    final linked = ref.watch(linkedIdentityProvider);
 
     return MaterialApp(
       title: 'FitNexus Wear',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: authState.isLoading
+      home: !linked.loaded
           ? const _SplashWear()
-          : authState.valueOrNull == null
-              ? const LoginWearScreen()
+          : linked.uid == null
+              ? const LinkWearScreen()
               : const _WearNavigation(),
     );
   }
@@ -58,6 +64,23 @@ class _SplashWear extends StatelessWidget {
           strokeWidth: 2,
         ),
       ),
+    );
+  }
+}
+
+class _ForceLinkWear extends StatelessWidget {
+  const _ForceLinkWear();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: Future.delayed(const Duration(milliseconds: 1500)),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const _SplashWear();
+        }
+        return const LinkWearScreen();
+      },
     );
   }
 }
@@ -91,31 +114,33 @@ class _WearNavigationState extends ConsumerState<_WearNavigation> {
   @override
   Widget build(BuildContext context) {
     ref.listen(wearSessionProvider, (prev, next) {
+      if (!mounted) return;
       if (next.isComplete && _currentPage != 4) {
-        _pageController.animateToPage(4, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-      } else if (next.isResting && _currentPage != 3) {
-        _pageController.animateToPage(3, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-      } else if (next.elapsedSeconds > 0 && _currentPage == 0) {
-        _pageController.animateToPage(1, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+        _pageController.animateToPage(4, duration: const Duration(milliseconds: 250), curve: Curves.easeInOut);
+      } else if (next.isResting && !next.isComplete && _currentPage != 3) {
+        _pageController.animateToPage(3, duration: const Duration(milliseconds: 250), curve: Curves.easeInOut);
+      } else if (next.currentExercise != null && !next.isResting && !next.isComplete && _currentPage == 0) {
+        _pageController.animateToPage(1, duration: const Duration(milliseconds: 250), curve: Curves.easeInOut);
       }
     });
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0F),
-      body: GestureDetector(
-        onTap: () {},
-        child: PageView(
-          controller: _pageController,
-          scrollDirection: Axis.horizontal,
-          onPageChanged: (i) => setState(() => _currentPage = i),
-          children: const [
-            WatchFaceScreen(),
-            EjercicioScreen(),
-            BpmScreen(),
-            DescansoScreen(),
-            ResumenScreen(),
-          ],
-        ),
+      body: PageView(
+        controller: _pageController,
+        scrollDirection: Axis.horizontal,
+        physics: const PageScrollPhysics(),
+        pageSnapping: true,
+        onPageChanged: (i) {
+          if (mounted) setState(() => _currentPage = i);
+        },
+        children: const [
+          WatchFaceScreen(),
+          EjercicioScreen(),
+          BpmScreen(),
+          DescansoScreen(),
+          ResumenScreen(),
+        ],
       ),
     );
   }
